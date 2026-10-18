@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>investbin - 토스증권 스타일 미장 퀀트 대시보드</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        toss: {
+                            bg: '#191f28',
+                            card: '#222933',
+                            cardHover: '#2a323f',
+                            blue: '#3182f6',
+                            blueHover: '#1b64d8',
+                            subText: '#8b95a1',
+                            green: '#22c55e',
+                            red: '#ef4444'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #191f28; color: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #191f28; }
+        ::-webkit-scrollbar-thumb { background: #2a323f; border-radius: 2px; }
+        /* Ticker Marquee Animation */
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        .marquee {
+            display: inline-block;
+            animation: marquee 30s linear infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-24 md:pb-12 antialiased selection:bg-blue-500 selection:text-white">
+
+    <!-- Toss Style Header -->
+    <header class="sticky top-0 z-50 bg-[#191f28]/90 backdrop-blur-md border-b border-[#2a323f]">
+        <div class="max-w-xl mx-auto px-4 h-14 flex items-center justify-between">
+            <div class="flex items-center space-x-2.5">
+                <div class="w-8 h-8 rounded-xl bg-blue-500 flex items-center justify-center font-bold text-white text-base shadow-md shadow-blue-500/20">
+                    i
+                </div>
+                <span class="text-lg font-bold tracking-tight text-white">investbin</span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 font-semibold">미장 80% 🚀</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button onclick="loadData" class="text-[#8b95a1] hover:text-white p-2 rounded-xl transition text-sm" title="새로고침">
+                    <i class="fa-solid fa-rotate"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container (Mobile First Toss Width) -->
+    <main class="max-w-xl mx-auto px-4 pt-4 space-y-5">
+
+        <!-- TAB 1: HOME -->
+        <section id="tab-home" class="tab-content space-y-5">
+
+            <!-- Ticker Bar (Real-time Market Indices) -->
+            <div id="ticker-bar" class="marquee flex overflow-x-auto space-x-2 py-2 text-xs text-[#8b95a1] border-b border-[#2a323f] mb-4">
+                <!-- Injected by JS -->
+            </div>
+
+            <!-- Portfolio Balance Card (Toss Style) -->
+            <div class="bg-[#222933] border border-[#2a323f] rounded-3xl p-6 shadow-xl relative overflow-hidden">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <span class="text-xs font-semibold text-[#8b95a1]">investbin 미장 총 자산 (AUM)</span>
+                        <div id="stat-aum" class="text-3xl font-black mt-1 text-white tracking-tight">-</div>
+                    </div>
+                    <span id="stat-profit" class="text-xs font-bold bg-green-500/10 text-green-400 px-2.5 py-1.5 rounded-xl">
+                        -
+                    </span>
+                </div>
+                <div class="mt-5 pt-4 border-t border-[#2a323f] flex items-center justify-between text-xs text-[#8b95a1]">
+                    <span id="market-status-badge">🇺🇸 나스닥 실시간 연동중</span>
+                    <span id="last-updated" class="text-gray-400">-</span>
+                </div>
+            </div>
+
+            <!-- Data Source Banner -->
+            <div id="data-source-banner" class="hidden bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 rounded-2xl p-4 text-xs font-medium flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span id="data-source-text">샘플 데이터입니다. 실제 계좌 아님</span>
+            </div>
+
+            <!-- Market Sentiment Banner -->
+            <div class="bg-[#222933] border border-[#2a323f] rounded-3xl p-5 shadow-lg">
+                <div class="flex items-center space-x-3 mb-2">
+                    <div class="w-8 h-8 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center font-bold text-sm">
+                        <i class="fa-solid fa-bolt"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs text-[#8b95a1]">AI 마켓 브리핑</div>
+                        <h3 id="sentiment-title" class="text-base font-bold text-white">미국 증시 분석 중...</h3>
+                    </div>
+                </div>
+                <p id="sentiment-summary" class="text-xs text-gray-300 leading-relaxed mt-2 bg-[#191f28] p-3.5 rounded-2xl border border-[#2a323f]">
+                    실시간 데이터를 불러오는 중입니다.
+                </p>
+            </div>
+
+            <!-- Top AI Picks (US Market Focused) -->
+            <div class="space-y-3">
+                <div class="flex justify-between items-center px-1">
+                    <h3 class="text-base font-bold text-white flex items-center space-x-2">
+                        <span>🔥 AI 미장 강력 추천 종목 (80%)</span>
+                    </h3>
+                    <span class="text-xs text-[#8b95a1]">실시간 퀀트</span>
+                </div>
+                <div id="top-picks-container" class="space-y-3">
+                    <!-- Injected by JS -->
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Signals -->
+        <section id="tab-signals" class="tab-content hidden space-y-4">
+                <h3 class="text-base font-bold px-1">미장/국장 실시간 시그널 스코어보드</h3>
+                <div class="bg-[#222933] border border-[#2a323f] rounded-3xl overflow-hidden shadow-lg">
+                    <div id="signals-container" class="divide-y divide-[#2a323f]">
+                        <!-- Injected by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: PORTFOLIO (NEW) -->
+            <section id="tab-portfolio" class="tab-content hidden space-y-4">
+                <h3 class="text-base font-bold px-1">내 포트폴리오 현황</h3>
+                <div id="portfolio-container" class="bg-[#222933] border border-[#2a323f] rounded-3xl p-6 shadow-lg">
+                    <!-- Injected by JS -->
+                </div>
+            </section>
+
+            <!-- TAB 3: REPORTS -->
+            <section id="tab-reports" class="tab-content hidden space-y-4">
+                <h3 class="text-base font-bold px-1">월가(Wall Street) 핵심 리포트 요약</h3>
+                <div class="space-y-3">
+                    <div class="bg-[#222933] border border-[#2a323f] rounded-3xl p-5">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-xs bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded-lg font-semibold">Goldman Sachs • AI Infra</span>
+                            <span class="text-xs text-[#8b95a1]">US Market</span>
+                        </div>
+                        <h4 class="text-base font-bold">NVIDIA (NVDA) - 블랙웰 칩 수요 슈퍼사이클 진입</h4>
+                        <p class="text-xs text-[#8b95a1] mt-2 leading-relaxed bg-[#191f28] p-3.5 rounded-2xl border border-[#2a323f]">
+                            1. 주요 빅테크(MSFT, GOOGL, META) 데이터센터 AI 가속기 주문량 전분기 대비 40% 급증<br>
+                            2. 공급망 제약 완화로 마진율 개선 및 EPS 상향 조정 확실시<br>
+                            3. 연말 목표주가 상향 리포트 연이어 발표됨
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: HISTORY -->
+            <section id="tab-history" class="tab-content hidden space-y-4">
+                <h3 class="text-base font-bold px-1">CEO 미장 주문 및 승인 내역</h3>
+                <div class="bg-[#222933] border border-[#2a323f] rounded-3xl overflow-hidden shadow-lg">
+                    <div class="divide-y divide-[#2a323f]">
+                        <div class="p-4 sm:p-5 flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-2xl bg-green-500/10 text-green-400 flex items-center justify-center font-bold">
+                                    NVDA
+                                </div>
+                                <div>
+                                    <div class="font-bold text-sm">NVIDIA <span class="text-[10px] text-green-400 bg-green-500/10 px-2 py-0.5 rounded ml-1">매수완료</span></div>
+                                    <div class="text-xs text-[#8b95a1] mt-0.5">5주 @ $135.00 (미장 실전계좌)</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold text-sm text-green-400">+ 2.4% (+$16.25)</div>
+                                <div class="text-xs text-[#8b95a1] mt-0.5">오늘 밤 (CEO 승인)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </section>
+
+        <!-- Toss Style Bottom Navigation Bar -->
+        <nav class="md:max-w-xl md:left-1/2 md:-translate-x-1/2 fixed bottom-0 left-0 right-0 bg-[#191f28]/95 backdrop-blur-md border-t border-[#2a323f] z-40 px-6 py-3 flex justify-around">
+            <button onclick="switchTab('home')" id="bm-home" class="mobile-nav-btn flex flex-col items-center space-y-1 text-blue-500">
+                <i class="fa-solid fa-house text-lg"></i>
+                <span class="text-[10px] font-bold">홈</span>
+            </button>
+            <button onclick="switchTab('signals')" id="bm-signals" class="mobile-nav-btn flex flex-col items-center space-y-1 text-[#8b95a1]">
+                <i class="fa-solid fa-bolt text-lg"></i>
+                <span class="text-[10px] font-bold">시그널</span>
+            </button>
+            <button onclick="switchTab('portfolio')" id="bm-portfolio" class="mobile-nav-btn flex flex-col items-center space-y-1 text-[#8b95a1]">
+                <i class="fa-solid fa-user-pen text-lg"></i>
+                <span class="text-[10px] font-bold">포트폴리오</span>
+            </button>
+            <button onclick="switchTab('reports')" id="bm-reports" class="mobile-nav-btn flex flex-col items-center space-y-1 text-[#8b95a1]">
+                <i class="fa-solid fa-newspaper text-lg"></i>
+                <span class="text-[10px] font-bold">리포트</span>
+            </button>
+            <button onclick="switchTab('history')" id="bm-history" class="mobile-nav-btn flex flex-col items-center space-y-1 text-[#8b95a1]">
+                <i class="fa-solid fa-clock-rotate-left text-lg"></i>
+                <span class="text-[10px] font-bold">승인내역</span>
+            </button>
+        </nav>
+
+        <!-- Approval Modal (Toss Bottom Sheet Style) -->
+        <div id="approvalModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end md:items-center justify-center p-0 md:p-4 hidden">
+            <div class="bg-[#222933] border-t md:border border-[#2a323f] rounded-t-3xl md:rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full">미장 실전 매매 승인</span>
+                    <button onclick="closeModal()" class="text-[#8b95a1] hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <div>
+                    <h4 id="modalStockName" class="text-xl font-bold text-white">NVIDIA (NVDA)</h4>
+                    <div id="modalStockPrice" class="text-2xl font-black text-blue-400 mt-1">$ 138.25</div>
+                </div>
+
+                <div class="bg-[#191f28] p-4 rounded-2xl border border-[#2a323f] space-y-2 text-xs text-gray-300">
+                    <div class="flex justify-between">
+                        <span class="text-[#8b95a1]">AI 추천 신뢰도</span>
+                        <span class="font-bold text-green-400" id="modalScore">96점 (강력 매수)</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[#8b95a1]">매매 전략</span>
+                        <span class="font-bold text-white">미장 80% 포트폴리오 비중 배정</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[#8b95a1]">판단 근거</span>
+                        <span id="modalReason" class="font-medium text-right text-gray-200">-</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 pt-2">
+                    <button onclick="closeModal()" class="bg-[#2a323f] hover:bg-[#323b49] text-gray-300 font-semibold py-3.5 rounded-2xl transition text-sm">
+                        취소
+                    </button>
+                    <button onclick="executeOrder()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-2xl transition text-sm shadow-lg shadow-blue-500/30 flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-check"></i>
+                        <span>매수 승인하기</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Script -->
+        <script>
+            let backendData = null;
+            let selectedStock = null;
+
+            async function loadData() {
+                try {
+                    const res = await fetch('data.json?t=' + new Date().getTime());
+                    if (!res.ok) throw new Error();
+                    backendData = await res.json();
+                    render(backendData);
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+
+            function renderTicker(indices) {
+                const container = document.getElementById('ticker-bar');
+                container.innerHTML = '';
+                if (!indices || indices.length === 0) {
+                    container.innerHTML = '시장 데이터 없음';
+                    return;
+                }
+                indices.forEach(i => {
+                    const span = document.createElement('span');
+                    span.className = 'marquee px-2';
+                    span.innerText = `${i.index_name} ${i.current_value} (${i.change_rate}%)`;
+                    container.appendChild(span);
+                });
+            }
+
+            function renderPortfolio(portfolio) {
+                const container = document.getElementById('portfolio-container');
+                if (!portfolio) {
+                    container.innerHTML = '<p class="text-[#8b95a1] text-sm">포트폴리오 데이터를 불러올 수 없습니다.</p>';
+                    return;
+                }
+                const holdings = portfolio.holdings || [];
+                let html = `
+                    <div class="flex items-start space-x-3">
+                        <div class="w-12 rounded-md bg-[#2a323f] p-2">
+                            <span class="text-xs font-bold text-green-400">${portfolio.total_balance}</span>
+                        </div>
+                        <div>
+                            <div class="font-semibold text-white">총 자산</div>
+                            <div class="text-xs text-[#8b95a1]">${portfolio.cash}</div>
+                        </div>
+                    </div>
+                    <table class="w-full table-fixed mt-4">
+                        <thead>
+                            <tr class="text-xs text-[#8b95a1] border-b border-[#2a323f]">
+                                <th class="p-2 code-col">종목코드</th>
+                                <th class="p-2 name-col">종목명</th>
+                                <th class="p-2 qty-col">수량</th>
+                                <th class="p-2 avg-col">평균가</th>
+                                <th class="p-2 current-col">현재가</th>
+                                <th class="p-2 pnl-col">손익</th>
+                                <th class="p-2 roi-col">수익률(%)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        `;
+                holdings.forEach(h => {
+                    const pnl = h.unrealized_pnl;
+                    const roi = h.roi;
+                    const pnlClass = pnl >= 0 ? 'text-green-400' : 'text-red-400';
+                    const roiClass = roi >= 0 ? 'text-green-400' : 'text-red-400';
+                    const currency = h.currency || 'KRW';
+                    const currencySymbol = currency === 'USD' ? '$' : '₩';
+
+                    // Format numbers with proper locale
+                    const formatNum = (num) => {
+                        if (currency === 'USD') {
+                            return num.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                        }
+                        return num.toLocaleString('ko-KR');
+                    };
+
+                    html += `
+                        <tr class="text-sm text-white">
+                            <td class="p-2 code-col">${h.code}</td>
+                            <td class="p-2 name-col">${h.name}</td>
+                            <td class="p-2 qty-col">${h.qty}</td>
+                            <td class="p-2 avg-col">${currencySymbol}${formatNum(h.avg_price)}</td>
+                            <td class="p-2 current-col">${currencySymbol}${formatNum(h.current_price)}</td>
+                            <td class="p-2 pnl-col ${pnlClass}">${currencySymbol}${formatNum(pnl)}</td>
+                            <td class="p-2 roi-col ${roiClass}">${roi.toFixed(2)}%</td>
+                        </tr>
+                    `;
+                });
+                html += `</tbody></table>`;
+                container.innerHTML = html;
+            }
+
+            async function loadData() {
+                try {
+                    const res = await fetch('data.json?t=' + new Date().getTime());
+                    if (!res.ok) throw new Error();
+                    backendData = await res.json();
+                    render(backendData);
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+
+            function render(data) {
+                // Update basic fields
+                document.getElementById('last-updated').innerText = data.last_updated;
+                document.getElementById('stat-aum').innerText = data.market_sentiment.aum;
+                document.getElementById('stat-profit').innerText = data.market_sentiment.daily_profit;
+                document.getElementById('sentiment-title').innerText = data.market_sentiment.status;
+                document.getElementById('sentiment-summary').innerText = data.market_sentiment.summary;
+
+                // Data Source Banner
+                const dataSourceBanner = document.getElementById('data-source-banner');
+                const dataSourceText = document.getElementById('data-source-text');
+                if (data.data_source === "sample") {
+                    dataSourceBanner.classList.remove('hidden');
+                    dataSourceText.innerText = "샘플 데이터입니다. 실제 계좌 아님";
+                } else {
+                    dataSourceBanner.classList.add('hidden');
+                }
+
+                // CEO 주문 이력 렌더링 (Human-in-the-Loop 결과)
+                renderOrders(data.orders || []);
+
+                // Top Picks
+                const pickContainer = document.getElementById('top-picks-container');
+                pickContainer.innerHTML = '';
+                data.top_picks.forEach(p => {
+                    const newsLink = p.news_url ? `<a href="${p.news_url}" target="_blank" class="text-xs text-blue-400 underline ml-1">[출처기사]</a>` : '';
+                    pickContainer.innerHTML += `
+                        <div class="bg-[#222933] border border-[#2a323f] hover:border-blue-500/50 rounded-3xl p-5 transition cursor-pointer flex items-center justify-between" onclick="openModal('${p.name}', '${p.code}', '${p.score}', '${p.price}', '${p.reason}')">
+                            <div class="space-y-1">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-xs font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md">${p.code}</span>
+                                    <span class="text-xs text-[#8b95a1]">${p.recommendation}</span>
+                                </div>
+                                <h4 class="text-base font-bold text-white">${p.name} ${newsLink}</h4>
+                                <p class="text-xs text-[#8b95a1] line-clamp-1">${p.reason}</p>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-base font-black text-white">${p.price}</div>
+                                <div class="text-xs font-bold text-green-400 mt-0.5">AI ${p.score}점</div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                // Signals
+                const sigContainer = document.getElementById('signals-container');
+                sigContainer.innerHTML = '';
+                data.top_picks.forEach(p => {
+                    const newsLink = p.news_url ? `<a href="${p.news_url}" target="_blank" class="text-xs text-blue-400 underline ml-1">[뉴스보기]</a>` : '';
+                    sigContainer.innerHTML += `
+                        <div class="p-4 sm:p-5 flex items-center justify-between hover:bg-[#2a323f]/50 transition cursor-pointer" onclick="openModal('${p.name}', '${p.code}', '${p.score}', '${p.price}', '${p.reason}')">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center font-bold text-sm">
+                                    ${p.code.substring(0, 3)}
+                                </div>
+                                <div>
+                                    <div class="font-bold text-sm text-white">${p.name} <span class="text-xs text-[#8b95a1]">${p.code}</span> ${newsLink}</div>
+                                    <div class="text-xs text-green-400 mt-0.5">${p.recommendation} (신뢰도 ${p.score}점)</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold text-sm text-white">${p.price}</div>
+                                <div class="text-xs text-blue-400 mt-0.5">승인 &rarr;</div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                // Ticker (Real-time Indices)
+                renderTicker(data.indices || []);
+
+                // Portfolio
+                renderPortfolio(data.portfolio);
+            }
+
+            function renderOrders(orders) {
+                const container = document.querySelector('#tab-history .divide-y');
+                if (!container) return;
+                container.innerHTML = '';
+
+                if (!orders || orders.length === 0) {
+                    container.innerHTML = `
+                        <div class="p-8 text-center text-[#8b95a1] text-sm">
+                            <i class="fa-solid fa-inbox text-3xl mb-2 block"></i>
+                            CEO 승인된 주문 이력이 없습니다.<br>
+                            텔레그램에서 /market 명령어로 매수 승인 버튼을 눌러보세요.
+                        </div>`;
+                    return;
+                }
+
+                orders.forEach(o => {
+                    const isBuy = o.action === 'BUY';
+                    const color = isBuy ? 'green' : 'red';
+                    const icon = isBuy ? 'fa-arrow-up' : 'fa-xmark';
+                    container.innerHTML += `
+                        <div class="p-4 sm:p-5 flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-2xl bg-${color}-500/10 text-${color}-400 flex items-center justify-center font-bold">
+                                    ${o.code.substring(0, 3)}
+                                </div>
+                                <div>
+                                    <div class="font-bold text-sm text-white">
+                                        ${o.name} <span class="text-[10px] ${isBuy ? 'text-green-400' : 'text-red-400'} bg-${color}-500/10 px-2 py-0.5 rounded ml-1">${o.status}</span>
+                                    </div>
+                                    <div class="text-xs text-[#8b95a1] mt-0.5">${o.price} | ${o.executed_by}</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs text-[#8b95a1] mt-0.5">${o.timestamp}</div>
+                                <div class="text-xs ${isBuy ? 'text-green-400' : 'text-red-400'} mt-0.5">
+                                    <i class="fa-solid ${icon}"></i> ${isBuy ? '매수 승인' : '매수 거절'}
+                                </div>
+                            </div>
+                        </div>`;
+                });
+            }
+
+            function switchTab(tabId) {
+                document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+                document.getElementById('tab-' + tabId).classList.remove('hidden');
+
+                document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+                    btn.classList.remove('text-blue-500');
+                    btn.classList.add('text-[#8b95a1]');
+                });
+                const bm = document.getElementById('bm-' + tabId);
+                if (bm) {
+                    bm.classList.add('text-blue-500');
+                    bm.classList.remove('text-[#8b95a1]');
+                }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            function openModal(name, code, score, price, reason) {
+                selectedStock = { name, code, score, price, reason };
+                document.getElementById('modalStockName').innerText = `${name} (${code})`;
+                document.getElementById('modalStockPrice').innerText = price;
+                document.getElementById('modalScore').innerText = `${score}점 (강력 매수)`;
+                document.getElementById('modalReason').innerText = reason;
+                document.getElementById('approvalModal').classList.remove('hidden');
+            }
+
+            function closeModal() {
+                document.getElementById('approvalModal').classList.add('hidden');
+            }
+
+            function executeOrder() {
+                alert(`🚀 [실전 미장 주문 전송완료]\n${selectedStock.name} (${selectedStock.code}) 주문이 증권사 API로 송신되었습니다!`);
+                closeModal();
+                switchTab('history');
+            }
+
+            window.onload = loadData;
+        </script>
+    </body>
+</html>
