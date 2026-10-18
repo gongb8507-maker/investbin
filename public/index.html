@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>investbin - 토스증권 스타일 미장 퀀트 대시보드</title>
+    <title>investbin - 토스증권 스타일 AI 퀀트 트레이딩 대시보드</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -20,7 +20,9 @@
                             blueHover: '#1b64d8',
                             subText: '#8b95a1',
                             green: '#22c55e',
-                            red: '#ef4444'
+                            red: '#ef4444',
+                            yellow: '#fbbf24',
+                            purple: '#a855f7'
                         }
                     }
                 }
@@ -51,6 +53,15 @@
         /* Safe area for iPhone notch/home indicator */
         .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
         .safe-top { padding-top: env(safe-area-inset-top, 0px); }
+        /* Loading shimmer */
+        .shimmer { background: linear-gradient(90deg, #2a323f 25%, #323b49 50%, #2a323f 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        /* Fade in animation */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+        /* Modal slide up */
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
     </style>
 </head>
 <body class="min-h-screen pb-28 md:pb-12 antialiased selection:bg-blue-500 selection:text-white safe-bottom">
@@ -66,11 +77,18 @@
                 <span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 font-semibold">미장 80% 🚀</span>
             </div>
             <div class="flex items-center space-x-2">
+                <!-- Live Indicator -->
+                <div id="live-indicator" class="flex items-center space-x-1 hidden">
+                    <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                    <span class="text-[10px] font-medium text-green-400">실시간</span>
+                </div>
                 <button onclick="loadData()" class="text-[#8b95a1] hover:text-white p-2 rounded-xl transition text-sm" title="새로고침">
                     <i class="fa-solid fa-rotate"></i>
                 </button>
             </div>
         </div>
+        <!-- Auto-refresh timer bar -->
+        <div id="refresh-bar" class="hidden h-1 bg-gradient-to-r from-blue-500 to-purple-500 w-full absolute bottom-0 left-0 origin-left" style="transform: scaleX(0);"></div>
     </header>
 
     <!-- Main Container (Mobile First Toss Width) -->
@@ -105,6 +123,12 @@
             <div id="data-source-banner" class="hidden bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 rounded-2xl p-3 text-xs font-medium flex items-center justify-center space-x-2">
                 <i class="fa-solid fa-triangle-exclamation text-sm"></i>
                 <span id="data-source-text">샘플 데이터입니다. 실제 계좌 아님</span>
+            </div>
+
+            <!-- Connection Status Banner -->
+            <div id="connection-banner" class="hidden bg-red-500/10 border border-red-500/30 text-red-300 rounded-2xl p-3 text-xs font-medium flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-wifi text-sm"></i>
+                <span id="connection-text">데이터 연결 끊김 - 재시도 중...</span>
             </div>
 
             <!-- Market Sentiment Banner -->
@@ -399,16 +423,86 @@
         <script>
             let backendData = null;
             let selectedStock = null;
+            let refreshInterval = null;
+            let refreshProgress = 0;
+            let isLoading = false;
 
             async function loadData() {
+                if (isLoading) return;
+                isLoading = true;
+
                 try {
                     const res = await fetch('data.json?t=' + new Date().getTime());
-                    if (!res.ok) throw new Error();
+                    if (!res.ok) throw new Error('Network response was not ok');
                     backendData = await res.json();
                     render(backendData);
+
+                    // Show live indicator
+                    document.getElementById('live-indicator')?.classList.remove('hidden');
+                    document.getElementById('connection-banner')?.classList.add('hidden');
+
                 } catch (e) {
-                    console.error(e);
+                    console.error('Data load failed:', e);
+                    // Show connection error banner
+                    document.getElementById('connection-banner')?.classList.remove('hidden');
+                    document.getElementById('live-indicator')?.classList.add('hidden');
+                } finally {
+                    isLoading = false;
                 }
+            }
+
+            // Auto-refresh with 30-second visual timer
+            function startAutoRefresh() {
+                if (refreshInterval) clearInterval(refreshInterval);
+
+                const refreshBar = document.getElementById('refresh-bar');
+                if (!refreshBar) return;
+
+                refreshProgress = 0;
+                refreshBar.style.transform = 'scaleX(0)';
+                refreshBar.classList.remove('hidden');
+
+                refreshInterval = setInterval(() => {
+                    refreshProgress += 1/30; // 30 seconds
+                    if (refreshBar) {
+                        refreshBar.style.transform = `scaleX(${Math.min(refreshProgress, 1)})`;
+                    }
+
+                    if (refreshProgress >= 1) {
+                        refreshProgress = 0;
+                        refreshBar.style.transform = 'scaleX(0)';
+                        loadData();
+                    }
+                }, 1000);
+            }
+
+            function stopAutoRefresh() {
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                    refreshInterval = null;
+                }
+                const refreshBar = document.getElementById('refresh-bar');
+                if (refreshBar) {
+                    refreshBar.classList.add('hidden');
+                    refreshBar.style.transform = 'scaleX(0)';
+                }
+            }
+
+            function renderTicker(indices) {
+                const container = document.getElementById('ticker-bar');
+                container.innerHTML = '';
+                if (!indices || indices.length === 0) {
+                    container.innerHTML = '시장 데이터 없음';
+                    return;
+                }
+                indices.forEach(i => {
+                    const span = document.createElement('span');
+                    span.className = 'marquee px-2';
+                    const change = parseFloat(i.change_rate) || 0;
+                    const colorClass = change >= 0 ? 'text-green-400' : 'text-red-400';
+                    span.innerHTML = `${i.index_name} <span class="font-bold ${colorClass}">${i.current_value.toLocaleString()} (${change >= 0 ? '+' : ''}${change.toFixed(2)}%)</span>`;
+                    container.appendChild(span);
+                });
             }
 
             function renderTicker(indices) {
@@ -1031,7 +1125,10 @@
                 switchTab('history');
             }
 
-            window.onload = loadData;
+            window.onload = function() {
+                loadData();
+                startAutoRefresh();
+            };
         </script>
     </body>
 </html> 
