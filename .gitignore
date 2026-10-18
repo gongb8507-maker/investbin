@@ -37,3 +37,4 @@ data.json
 # Cache
 .cache/
 .token_cache.json
+.vercel

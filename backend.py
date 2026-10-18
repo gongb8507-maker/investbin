@@ -427,6 +427,105 @@ def get_orders():
     return data.get("orders", [])
 
 
+async def execute_toss_order(code: str, name: str, side: str, quantity: int, order_type: str = "LIMIT", price: float = None) -> dict:
+    """
+    토스증권 API로 실제 주문 실행
+    Human-in-the-Loop 승인 후 호출됨
+
+    Args:
+        code: 종목코드
+        name: 종목명
+        side: "BUY" | "SELL"
+        quantity: 주문 수량
+        order_type: "LIMIT" | "MARKET"
+        price: 지정가 주문 시 가격
+
+    Returns:
+        주문 결과 딕셔너리
+    """
+    from backend.api.toss_client import create_toss_client_from_env
+
+    toss_client = None
+    try:
+        toss_client = create_toss_client_from_env()
+
+        # 계좌 확보
+        accounts = await toss_client.get_accounts()
+        if not accounts:
+            return {"success": False, "error": "No accounts found"}
+
+        account_seq = None
+        if toss_client.account_seq:
+            for acc in accounts:
+                if acc.get("accountSeq") == toss_client.account_seq:
+                    account_seq = acc.get("accountSeq")
+                    break
+        if not account_seq:
+            account_seq = accounts[0].get("accountSeq")
+
+        if not account_seq:
+            return {"success": False, "error": "No accountSeq"}
+
+        # 매수 가능 금액 확인 (매수 시)
+        if side == "BUY":
+            currency = "KRW" if code.isdigit() else "USD"
+            buying_power = await toss_client.get_buying_power(currency, account_seq)
+            cash_power = float(buying_power.get("cashBuyingPower", 0))
+            estimated_cost = (price or 0) * quantity * 1.005  # 수수료 감안 0.5% 여유
+
+            if cash_power < estimated_cost:
+                return {
+                    "success": False,
+                    "error": f"매수 가능 금액 부족: 보유 {cash_power:,.0f}{currency}, 필요 ~{estimated_cost:,.0f}{currency}"
+                }
+
+        # 매도 가능 수량 확인 (매도 시)
+        if side == "SELL":
+            sellable = await toss_client.get_sellable_quantity(code, account_seq)
+            sellable_qty = float(sellable.get("sellableQuantity", 0))
+
+            if sellable_qty < quantity:
+                return {
+                    "success": False,
+                    "error": f"매도 가능 수량 부족: 가능 {sellable_qty}주, 요청 {quantity}주"
+                }
+
+        # 주문 실행
+        if order_type == "LIMIT" and price is None:
+            return {"success": False, "error": "LIMIT order requires price"}
+
+        order_result = await toss_client.place_order(
+            symbol=code,
+            side=side,
+            order_type=order_type,
+            time_in_force="DAY",
+            quantity=quantity,
+            price=price,
+            account_seq=account_seq
+        )
+
+        # 주문 이력 기록
+        price_str = f"{int(price):,}원" if price else "시장가"
+        record_order(code, name, price_str, side)
+
+        return {
+            "success": True,
+            "order_id": order_result.get("orderId"),
+            "status": order_result.get("status"),
+            "ordered_at": order_result.get("orderedAt"),
+            "side": side,
+            "quantity": quantity,
+            "price": price,
+            "order_type": order_type
+        }
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+    finally:
+        if toss_client:
+            await toss_client.close()
+
+
 if __name__ == "__main__":
     import sys
     if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':

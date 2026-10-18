@@ -12,8 +12,8 @@ import yfinance as yf
 from backend.models.schemas import (
     NewsData, MarketTrendData, MarketType
 )
-from backend.api.finnhub import FinnhubClient  # Finnhub API 클라이언트
-from backend.api.yahoo import YahooFinanceClient  # Yahoo Finance 클라이언트
+from backend.api.finnhub import FinnhubClient, create_finnhub_client_from_env  # Finnhub API 클라이언트
+from backend.api.yahoo import YahooFinanceClient, create_yahoo_client_from_env  # Yahoo Finance 클라이언트
 
 
 class MarketTeamError(Exception):
@@ -49,6 +49,12 @@ class MarketTeam:
     async def _set_cache(self, key: str, data: Dict[str, Any]):
         self.cache[key] = (datetime.now(), data)
 
+    def _calc_change_percent(self, open_price: float, close_price: float) -> float:
+        """시가/종가로부터 변동률 계산"""
+        if open_price == 0:
+            return 0.0
+        return ((close_price - open_price) / open_price) * 100
+
     async def get_krx_indices(self) -> List[MarketTrendData]:
         """
         한국 주요 지수 (KOSPI, KOSDAQ, 코스닥150, KRX100)
@@ -73,11 +79,14 @@ class MarketTeam:
                 hist = ticker.history(period="1d")
                 if not hist.empty:
                     latest = hist.iloc[-1]
+                    open_price = float(latest['Open'])
+                    close_price = float(latest['Close'])
+                    change_rate = self._calc_change_percent(open_price, close_price)
                     trend = MarketTrendData(
                         index_name=symbol,
-                        current_value=float(latest['Close']),
-                        change_rate=float(latest['Change Percent']),
-                        volume=int(latest['Volume']) if not latest['Volume'].isna() else None
+                        current_value=close_price,
+                        change_rate=change_rate,
+                        volume=int(latest['Volume']) if latest['Volume'] is not None and not (hasattr(latest['Volume'], '__float__') and latest['Volume'] != latest['Volume']) else None
                     )
                     await self._set_cache(cache_key, trend.dict())
                     trends.append(trend)
@@ -108,11 +117,14 @@ class MarketTeam:
                 hist = ticker.history(period="1d")
                 if not hist.empty:
                     latest = hist.iloc[-1]
+                    open_price = float(latest['Open'])
+                    close_price = float(latest['Close'])
+                    change_rate = self._calc_change_percent(open_price, close_price)
                     trend = MarketTrendData(
                         index_name=symbol,
-                        current_value=float(latest['Close']),
-                        change_rate=float(latest['Change Percent']),
-                        volume=int(latest['Volume']) if not latest['Volume'].isna() else None
+                        current_value=close_price,
+                        change_rate=change_rate,
+                        volume=int(latest['Volume']) if latest['Volume'] is not None and not (hasattr(latest['Volume'], '__float__') and latest['Volume'] != latest['Volume']) else None
                     )
                     await self._set_cache(cache_key, trend.dict())
                     trends.append(trend)
@@ -143,11 +155,14 @@ class MarketTeam:
                 hist = ticker.history(period="1d")
                 if not hist.empty:
                     latest = hist.iloc[-1]
+                    open_price = float(latest['Open'])
+                    close_price = float(latest['Close'])
+                    change_rate = self._calc_change_percent(open_price, close_price)
                     trend = MarketTrendData(
                         index_name=code,
-                        current_value=float(latest['Close']),
-                        change_rate=float(latest['Change Percent']),
-                        volume=int(latest['Volume']) if not latest['Volume'].isna() else None
+                        current_value=close_price,
+                        change_rate=change_rate,
+                        volume=int(latest['Volume']) if latest['Volume'] is not None and not (hasattr(latest['Volume'], '__float__') and latest['Volume'] != latest['Volume']) else None
                     )
                     await self._set_cache(cache_key, trend.dict())
                     trends.append(trend)

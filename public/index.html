@@ -486,7 +486,7 @@
                     const evalAmount = h.qty * h.current_price;
 
                     html += `
-                        <tr class="text-sm text-white hover:bg-[#2a323f]/30">
+                        <tr class="text-sm text-white hover:bg-[#2a323f]/30 cursor-pointer" onclick="openStockDetail('${h.name.replace(/'/g, "\\'")}', '${h.code}', 0, '${currencySymbol}${fmtShort(h.current_price, currency)}', '포트폴리오 보유 종목')">
                             <td class="px-2 py-3 text-left font-medium whitespace-nowrap">
                                 <div class="flex items-center space-x-2">
                                     <span class="text-[11px] font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded">${h.code}</span>

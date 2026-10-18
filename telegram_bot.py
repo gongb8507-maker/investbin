@@ -230,7 +230,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     parts = data.split(':')
 
     if data == "DECIDE_NOW":
-        # 최종 결정 처리
+        # 최종 결정 처리 - 실제 주문 실행 포함
         selections = context.user_data.get('selections', {})
         if not selections:
             await query.edit_message_text(
@@ -239,31 +239,60 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        # 기록
+        await query.edit_message_text(text="⏳ 주문 실행 중...", parse_mode='Markdown')
+
+        # 기록 및 실제 주문 실행
         results = []
         for code, action in selections.items():
-            # 이름과 가격은 data.json에서 찾아야 하지만, 간단히 콜백에서 받지 못해 여기서 다시 조회
+            # 이름과 가격 조회
             market_data = load_market_data()
+            name = code
+            price_str = "알 수 없음"
+            current_price = 0
             if market_data:
                 for p in market_data['top_picks']:
                     if p['code'] == code:
                         name = p['name']
-                        price = p['price']
+                        price_str = p['price']
+                        # 가격 파싱 (숫자만 추출)
+                        import re
+                        price_match = re.search(r'[\d,]+', price_str.replace(',', ''))
+                        if price_match:
+                            current_price = float(price_match.group().replace(',', ''))
                         break
-                else:
-                    name = code
-                    price = "알 수 없음"
-            else:
-                name = code
-                price = "알 수 없음"
 
-            order = backend.record_order(code, name, price, action)
-            results.append((name, code, action, order['status'], order['timestamp']))
+            if action == "BUY":
+                # 실제 토스 주문 실행 (1주 기본, 필요시 수량 조절 로직 추가 가능)
+                order_result = await backend.execute_toss_order(
+                    code=code,
+                    name=name,
+                    side="BUY",
+                    quantity=1,  # 기본 1주, 향후 설정 가능하게 확장
+                    order_type="LIMIT",
+                    price=current_price if current_price > 0 else None
+                )
+
+                if order_result.get("success"):
+                    status = f"주문 접수됨 (ID: {order_result.get('order_id')})"
+                    order_info = order_result
+                else:
+                    status = f"주문 실패: {order_result.get('error')}"
+                    # 실패해도 이력은 기록
+                    backend.record_order(code, name, price_str, "BUY")
+                    order_info = {"status": status}
+            else:
+                # 거절은 이력만 기록
+                order = backend.record_order(code, name, price_str, "REJECT")
+                status = order['status']
+                order_info = {"status": status}
+
+            results.append((name, code, action, status, order_info.get('ordered_at', datetime.now().strftime("%Y-%m-%d %H:%M:%S"))))
 
         # 선택 상태 초기화
         context.user_data['selections'] = {}
 
         # 결과 메시지
+        from datetime import datetime
         msg = "🚀 *결정 처리 완료*\n\n"
         for name, code, action, status, ts in results:
             icon = "✅" if action == "BUY" else "❌"

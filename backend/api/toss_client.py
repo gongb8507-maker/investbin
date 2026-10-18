@@ -396,6 +396,180 @@ class TossClient:
     # market-indicators/prices는 KOSPI/KOSDAQ 지수 전용
 
     # ==========================================
+    # Order API (주문 기능)
+    # ==========================================
+
+    async def place_order(
+        self,
+        symbol: str,
+        side: str,  # "BUY" | "SELL"
+        order_type: str,  # "LIMIT" | "MARKET" | "MARKET_ON_CLOSE"
+        time_in_force: str,  # "DAY" | "IOC" | "FOK"
+        quantity: int,
+        price: Optional[float] = None,
+        order_amount: Optional[float] = None,
+        account_seq: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """
+        주문 접수 (POST /api/v1/orders)
+
+        Args:
+            symbol: 종목코드 (KR: 6자리, US: 티커)
+            side: BUY(매수) | SELL(매도)
+            order_type: LIMIT(지정가) | MARKET(시장가) | MARKET_ON_CLOSE(장마감시장가)
+            time_in_force: DAY(당일) | IOC(즉시체결취소) | FOK(전량체결취소)
+            quantity: 주문 수량
+            price: 지정가 주문 시 필수 (KRW/USD)
+            order_amount: 시장가 주문 시 금액 지정 가능
+            account_seq: 계좌번호 (미지정 시 인스턴스 변수 사용)
+        """
+        seq = account_seq if account_seq is not None else self.account_seq
+        if seq is None:
+            raise ValueError("account_seq required for order")
+
+        body = {
+            "symbol": symbol,
+            "side": side,
+            "orderType": order_type,
+            "timeInForce": time_in_force,
+            "quantity": str(quantity)
+        }
+
+        if order_type == "LIMIT":
+            if price is None:
+                raise ValueError("LIMIT order requires price")
+            body["price"] = str(price)
+        elif order_type in ("MARKET", "MARKET_ON_CLOSE"):
+            if order_amount is not None:
+                body["orderAmount"] = str(order_amount)
+
+        headers = {"X-Tossinvest-Account": str(seq)}
+        resp = await self._request_with_retry("POST", "/api/v1/orders", json=body, headers=headers)
+        return resp
+
+    async def cancel_order(
+        self,
+        order_id: str,
+        account_seq: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """주문 취소 (POST /api/v1/orders/{orderId}/cancel)"""
+        seq = account_seq if account_seq is not None else self.account_seq
+        if seq is None:
+            raise ValueError("account_seq required for order cancel")
+
+        headers = {"X-Tossinvest-Account": str(seq)}
+        resp = await self._request_with_retry("POST", f"/api/v1/orders/{order_id}/cancel", headers=headers)
+        return resp
+
+    async def replace_order(
+        self,
+        order_id: str,
+        quantity: int,
+        price: Optional[float] = None,
+        account_seq: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """주문 정정 (POST /api/v1/orders/{orderId}/replace)"""
+        seq = account_seq if account_seq is not None else self.account_seq
+        if seq is None:
+            raise ValueError("account_seq required for order replace")
+
+        body = {"quantity": str(quantity)}
+        if price is not None:
+            body["price"] = str(price)
+
+        headers = {"X-Tossinvest-Account": str(seq)}
+        resp = await self._request_with_retry("POST", f"/api/v1/orders/{order_id}/replace", json=body, headers=headers)
+        return resp
+
+    async def get_orders(
+        self,
+        status: str,  # "OPEN" | "CLOSED"
+        symbol: Optional[str] = None,
+        from_date: Optional[str] = None,
+        to_date: Optional[str] = None,
+        cursor: Optional[str] = None,
+        limit: int = 100,
+        account_seq: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """주문 목록 조회 (GET /api/v1/orders)"""
+        seq = account_seq if account_seq is not None else self.account_seq
+        if seq is None:
+            raise ValueError("account_seq required for order list")
+
+        params = {"status": status}
+        if symbol:
+            params["symbol"] = symbol
+        if from_date:
+            params["from"] = from_date
+        if to_date:
+            params["to"] = to_date
+        if cursor:
+            params["cursor"] = cursor
+        if limit:
+            params["limit"] = str(limit)
+
+        headers = {"X-Tossinvest-Account": str(seq)}
+        resp = await self._request_with_retry("GET", "/api/v1/orders", params=params, headers=headers)
+        return resp
+
+    async def get_order_detail(
+        self,
+        order_id: str,
+        account_seq: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """주문 상세 조회 (GET /api/v1/orders/{orderId})"""
+        seq = account_seq if account_seq is not None else self.account_seq
+        if seq is None:
+            raise ValueError("account_seq required for order detail")
+
+        headers = {"X-Tossinvest-Account": str(seq)}
+        resp = await self._request_with_retry("GET", f"/api/v1/orders/{order_id}", headers=headers)
+        return resp
+
+    async def get_buying_power(
+        self,
+        currency: str,  # "KRW" | "USD"
+        account_seq: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """매수 가능 금액 조회 (GET /api/v1/buying-power)"""
+        seq = account_seq if account_seq is not None else self.account_seq
+        if seq is None:
+            raise ValueError("account_seq required for buying power")
+
+        params = {"currency": currency}
+        headers = {"X-Tossinvest-Account": str(seq)}
+        resp = await self._request_with_retry("GET", "/api/v1/buying-power", params=params, headers=headers)
+        return resp
+
+    async def get_sellable_quantity(
+        self,
+        symbol: str,
+        account_seq: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """판매 가능 수량 조회 (GET /api/v1/sellable-quantity)"""
+        seq = account_seq if account_seq is not None else self.account_seq
+        if seq is None:
+            raise ValueError("account_seq required for sellable quantity")
+
+        params = {"symbol": symbol}
+        headers = {"X-Tossinvest-Account": str(seq)}
+        resp = await self._request_with_retry("GET", "/api/v1/sellable-quantity", params=params, headers=headers)
+        return resp
+
+    async def get_commissions(
+        self,
+        account_seq: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        """매매 수수료 조회 (GET /api/v1/commissions)"""
+        seq = account_seq if account_seq is not None else self.account_seq
+        if seq is None:
+            raise ValueError("account_seq required for commissions")
+
+        headers = {"X-Tossinvest-Account": str(seq)}
+        resp = await self._request_with_retry("GET", "/api/v1/commissions", headers=headers)
+        return resp if isinstance(resp, list) else []
+
+    # ==========================================
     # Data Transformation: API Response → data.json Portfolio
     # ==========================================
 

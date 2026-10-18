@@ -1,0 +1,365 @@
+{
+  "last_updated": "2026-10-19 01:04:55",
+  "system_metrics": {
+    "cpu_percent": 6.9,
+    "memory_percent": 77.2,
+    "memory_available_gb": 3.63,
+    "timestamp": "2026-10-19 00:18:01"
+  },
+  "market_sentiment": {
+    "score": 78,
+    "status": "강한 상승세",
+    "summary": "실제 계좌 데이터 기반 분석 중...",
+    "aum": "₩603,612",
+    "daily_profit": "-"
+  },
+  "top_picks": [
+    {
+      "code": "005930",
+      "name": "삼성전자",
+      "score": 92,
+      "recommendation": "강력 매수",
+      "price": "조회중...",
+      "reason": "증권사 목표가 일제 상향 (평균 95,000원) 및 외국인 3일 연속 순매수",
+      "news_source": "한국경제",
+      "news_url": "https://www.hankyung.com/finance"
+    },
+    {
+      "code": "000660",
+      "name": "SK하이닉스",
+      "score": 89,
+      "recommendation": "매수",
+      "price": "조회중...",
+      "reason": "HBM3e 독점 공급 모멘텀 지속 및 기관 수급 집중",
+      "news_source": "매일경제",
+      "news_url": "https://www.mk.co.kr/news/stock"
+    },
+    {
+      "code": "035420",
+      "name": "NAVER",
+      "score": 85,
+      "recommendation": "매수",
+      "price": "조회중...",
+      "reason": "사내 AI 검색 서비스 고도화 및 저점 매수세 유입",
+      "news_source": "연합뉴스",
+      "news_url": "https://www.yna.co.kr/market"
+    }
+  ],
+  "orders": [],
+  "indices": [
+    {
+      "index_name": "KOSPI",
+      "current_value": 5668.05,
+      "change_rate": 0.0,
+      "volume": null,
+      "market_breadth": null
+    },
+    {
+      "index_name": "KOSDAQ",
+      "current_value": 794.78,
+      "change_rate": 0.0,
+      "volume": null,
+      "market_breadth": null
+    }
+  ],
+  "portfolio": {
+    "total_balance": "₩603,612",
+    "cash": "₩0",
+    "cash_krw": 0,
+    "cash_usd": 0,
+    "holdings": [
+      {
+        "code": "GRML",
+        "name": "그린란드 마인스",
+        "market": "US",
+        "currency": "USD",
+        "qty": 35,
+        "avg_price": 17.5,
+        "current_price": 6.0,
+        "unrealized_pnl": -402.5,
+        "roi": -65.71
+      },
+      {
+        "code": "GLND",
+        "name": "그린란드 에너지 컴퍼니",
+        "market": "US",
+        "currency": "USD",
+        "qty": 76,
+        "avg_price": 6.76,
+        "current_price": 3.12,
+        "unrealized_pnl": -276.64,
+        "roi": -53.84
+      }
+    ]
+  },
+  "stock_details": {
+    "005930": {
+      "code": "005930",
+      "name": "삼성전자",
+      "expert_good": "토스증권 API: 비보유 종목 공공 시세 미제공",
+      "expert_bad": "보유 종목만 실시간 시세 조회 가능",
+      "ceo_comment": "삼성전자: 토스 계좌 보유 시 실시간 시세 표시됨 (현재 비보유)",
+      "timestamp": "2026-10-19 01:04:55"
+    },
+    "000660": {
+      "code": "000660",
+      "name": "SK하이닉스",
+      "expert_good": "토스증권 API: 비보유 종목 공공 시세 미제공",
+      "expert_bad": "보유 종목만 실시간 시세 조회 가능",
+      "ceo_comment": "SK하이닉스: 토스 계좌 보유 시 실시간 시세 표시됨 (현재 비보유)",
+      "timestamp": "2026-10-19 01:04:55"
+    },
+    "035420": {
+      "code": "035420",
+      "name": "NAVER",
+      "expert_good": "토스증권 API: 비보유 종목 공공 시세 미제공",
+      "expert_bad": "보유 종목만 실시간 시세 조회 가능",
+      "ceo_comment": "NAVER: 토스 계좌 보유 시 실시간 시세 표시됨 (현재 비보유)",
+      "timestamp": "2026-10-19 01:04:55"
+    }
+  },
+  "data_source": "live",
+  "collected_data": {
+    "timestamp": "2026-10-19 01:03:08",
+    "disclosures": [],
+    "financials": [],
+    "news": [],
+    "market_trends": [
+      {
+        "index_name": "^KS11",
+        "current_value": 5668.0498046875,
+        "change_rate": 0.2486663352727592,
+        "volume": 298900,
+        "market_breadth": null
+      },
+      {
+        "index_name": "^KQ11",
+        "current_value": 794.780029296875,
+        "change_rate": 2.9281177573759014,
+        "volume": 466400,
+        "market_breadth": null
+      },
+      {
+        "index_name": "^KQ100",
+        "current_value": 1933.22998046875,
+        "change_rate": 3.1419067897143225,
+        "volume": 62440,
+        "market_breadth": null
+      },
+      {
+        "index_name": "^GSPC",
+        "current_value": 7659.43994140625,
+        "change_rate": -1.1087971156977043,
+        "volume": 5482060000,
+        "market_breadth": null
+      },
+      {
+        "index_name": "^IXIC",
+        "current_value": 26140.029296875,
+        "change_rate": -1.9245546383693313,
+        "volume": 9505000000,
+        "market_breadth": null
+      },
+      {
+        "index_name": "^DJI",
+        "current_value": 52002.41015625,
+        "change_rate": -0.5847469778028693,
+        "volume": 488090000,
+        "market_breadth": null
+      },
+      {
+        "index_name": "^RUT",
+        "current_value": 2721.3701171875,
+        "change_rate": -1.7172690445775407,
+        "volume": 5482060000,
+        "market_breadth": null
+      }
+    ],
+    "system_metrics": {
+      "cpu_percent": 6.8,
+      "memory_percent": 70.3,
+      "memory_available_gb": 4.72,
+      "timestamp": "2026-10-19 01:03:08"
+    },
+    "risk_preview": {
+      "overall_status": "VIOLATION",
+      "violations_count": 5,
+      "warnings_count": 0,
+      "key_metrics": {
+        "max_stock_weight": 0.5303274288781535,
+        "max_sector_weight": 1.0,
+        "cash_ratio": 0.0,
+        "drawdown": 0.0
+      },
+      "violations": [
+        "종목 비중 초과: 그린란드 마인스(GRML) 47.0% > 10%",
+        "종목 비중 초과: 그린란드 에너지 컴퍼니(GLND) 53.0% > 10%",
+        "섹터 비중 초과: 기타 100.0% > 30%",
+        "현금 비중 부족: 0.0% < 10%",
+        "일일 손실 한도 초과: 151.9% > 5%"
+      ],
+      "warnings": [],
+      "checked_at": "2026-10-19 01:03:08"
+    },
+    "market_sentiment": {
+      "score": 50,
+      "status": "중립",
+      "summary": "최근 0개 뉴스 분석 결과 센티먼트 점수: 0.50"
+    }
+  },
+  "pipeline_version": 6,
+  "review_results": [
+    {
+      "stage": "1차_검토",
+      "reviewed_by": "AI Director (Strategy Team)",
+      "timestamp": "2026-10-19 01:04:28",
+      "analyses": [
+        {
+          "code": "005930",
+          "name": "삼성전자",
+          "market": "KR",
+          "current_price": 0.0,
+          "target_price": null,
+          "score": 50,
+          "recommendation": "보유",
+          "reason": "",
+          "risk_level": "보통",
+          "expected_return": null,
+          "holding_period": null
+        },
+        {
+          "code": "000660",
+          "name": "SK하이닉스",
+          "market": "KR",
+          "current_price": 0.0,
+          "target_price": null,
+          "score": 50,
+          "recommendation": "보유",
+          "reason": "",
+          "risk_level": "보통",
+          "expected_return": null,
+          "holding_period": null
+        },
+        {
+          "code": "035420",
+          "name": "NAVER",
+          "market": "KR",
+          "current_price": 0.0,
+          "target_price": null,
+          "score": 50,
+          "recommendation": "보유",
+          "reason": "",
+          "risk_level": "보통",
+          "expected_return": null,
+          "holding_period": null
+        }
+      ],
+      "approved_codes": [],
+      "rejected_codes": [],
+      "notes": "1차 검토 완료: 0개 승인, 0개 거절, 센티먼트 50점 반영",
+      "ai_stock_details": {
+        "005930": {
+          "code": "005930",
+          "name": "삼성전자",
+          "expert_good": "토스증권 API: 비보유 종목 공공 시세 미제공",
+          "expert_bad": "보유 종목만 실시간 시세 조회 가능",
+          "ceo_comment": "삼성전자: 토스 계좌 보유 시 실시간 시세 표시됨 (현재 비보유)",
+          "timestamp": "2026-10-19 01:04:28"
+        },
+        "000660": {
+          "code": "000660",
+          "name": "SK하이닉스",
+          "expert_good": "토스증권 API: 비보유 종목 공공 시세 미제공",
+          "expert_bad": "보유 종목만 실시간 시세 조회 가능",
+          "ceo_comment": "SK하이닉스: 토스 계좌 보유 시 실시간 시세 표시됨 (현재 비보유)",
+          "timestamp": "2026-10-19 01:04:28"
+        },
+        "035420": {
+          "code": "035420",
+          "name": "NAVER",
+          "expert_good": "토스증권 API: 비보유 종목 공공 시세 미제공",
+          "expert_bad": "보유 종목만 실시간 시세 조회 가능",
+          "ceo_comment": "NAVER: 토스 계좌 보유 시 실시간 시세 표시됨 (현재 비보유)",
+          "timestamp": "2026-10-19 01:04:28"
+        }
+      },
+      "trading_signals": []
+    },
+    {
+      "stage": "1차_검토",
+      "reviewed_by": "AI Director (Strategy Team)",
+      "timestamp": "2026-10-19 01:04:55",
+      "analyses": [
+        {
+          "code": "005930",
+          "name": "삼성전자",
+          "market": "KR",
+          "current_price": 0.0,
+          "target_price": null,
+          "score": 50,
+          "recommendation": "보유",
+          "reason": "",
+          "risk_level": "보통",
+          "expected_return": null,
+          "holding_period": null
+        },
+        {
+          "code": "000660",
+          "name": "SK하이닉스",
+          "market": "KR",
+          "current_price": 0.0,
+          "target_price": null,
+          "score": 50,
+          "recommendation": "보유",
+          "reason": "",
+          "risk_level": "보통",
+          "expected_return": null,
+          "holding_period": null
+        },
+        {
+          "code": "035420",
+          "name": "NAVER",
+          "market": "KR",
+          "current_price": 0.0,
+          "target_price": null,
+          "score": 50,
+          "recommendation": "보유",
+          "reason": "",
+          "risk_level": "보통",
+          "expected_return": null,
+          "holding_period": null
+        }
+      ],
+      "approved_codes": [],
+      "rejected_codes": [],
+      "notes": "1차 검토 완료: 0개 승인, 0개 거절, 센티먼트 50점 반영",
+      "ai_stock_details": {
+        "005930": {
+          "code": "005930",
+          "name": "삼성전자",
+          "expert_good": "토스증권 API: 비보유 종목 공공 시세 미제공",
+          "expert_bad": "보유 종목만 실시간 시세 조회 가능",
+          "ceo_comment": "삼성전자: 토스 계좌 보유 시 실시간 시세 표시됨 (현재 비보유)",
+          "timestamp": "2026-10-19 01:04:55"
+        },
+        "000660": {
+          "code": "000660",
+          "name": "SK하이닉스",
+          "expert_good": "토스증권 API: 비보유 종목 공공 시세 미제공",
+          "expert_bad": "보유 종목만 실시간 시세 조회 가능",
+          "ceo_comment": "SK하이닉스: 토스 계좌 보유 시 실시간 시세 표시됨 (현재 비보유)",
+          "timestamp": "2026-10-19 01:04:55"
+        },
+        "035420": {
+          "code": "035420",
+          "name": "NAVER",
+          "expert_good": "토스증권 API: 비보유 종목 공공 시세 미제공",
+          "expert_bad": "보유 종목만 실시간 시세 조회 가능",
+          "ceo_comment": "NAVER: 토스 계좌 보유 시 실시간 시세 표시됨 (현재 비보유)",
+          "timestamp": "2026-10-19 01:04:55"
+        }
+      },
+      "trading_signals": []
+    }
+  ]
+}

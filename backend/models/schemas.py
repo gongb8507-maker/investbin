@@ -3,7 +3,7 @@ investbin AI 자동매매 시스템 - 데이터 모델 정의
 Pydantic 기반으로 타입 안전성 보장
 """
 from pydantic import BaseModel, Field
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, Dict, Any
 from datetime import datetime
 from enum import Enum
 
@@ -139,6 +139,10 @@ class ReviewResult(BaseModel):
     approved_codes: List[str] = []
     rejected_codes: List[str] = []
     notes: str = ""
+    # AI 분석 상세 (1차 검토에서 생성, 상세 뷰용)
+    ai_stock_details: Dict[str, Dict[str, Any]] = {}
+    # 2차 검토에서 생성된 거래 시그널
+    trading_signals: List[Dict[str, Any]] = []
 
 
 # ==========================================

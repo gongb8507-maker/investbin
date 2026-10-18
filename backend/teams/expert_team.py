@@ -11,7 +11,7 @@ import httpx
 from backend.models.schemas import (
     DisclosureData, FinancialData, CollectedData, StockAnalysis
 )
-from backend.api.dart import DartClient  # DART API 클라이언트
+from backend.api.dart import DartClient, create_dart_client_from_env  # DART API 클라이언트
 
 
 class ExpertTeamError(Exception):
@@ -172,7 +172,7 @@ class ExpertTeam:
             matching_disclosures = [d for d in disclosures if d.corp_code == code]
             if matching_disclosures:
                 latest_disc = max(matching_disclosures, key=lambda x: x.receipt_date)
-                analysis.reason += f" 최근 공시: {latest_disc.report_name} ({latest_disc.receipt_date})".
+                analysis.reason += f" 최근 공시: {latest_disc.report_name} ({latest_disc.receipt_date})"
 
             analyses.append(analysis)
 
