@@ -17,6 +17,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from backend.pipeline import Pipeline
 from backend.teams.orchestrator import get_orchestrator, PipelineStatus
 from backend.teams.dashboard_team import create_dashboard_team
+from backend.ws_server import run_ws_server, get_ws_server
 
 
 class InvestbinDaemon:
@@ -189,6 +190,10 @@ class InvestbinDaemon:
         # 6. 대시보드 파일 감시 시작
         await self.dashboard_team.start_watcher()
 
+        # 7. WebSocket 실시간 서버 시작
+        self._ws_runner = await get_ws_server().start()
+        print("✅ WebSocket 서버 시작됨 (ws://0.0.0.0:8080/ws)")
+
         self.scheduler.start()
         self._running = True
         print("✅ 스케줄러 시작됨")
@@ -219,6 +224,16 @@ class InvestbinDaemon:
             self.scheduler.shutdown(wait=True)
 
         await self.dashboard_team.stop_watcher()
+
+        # WebSocket 서버 정지
+        try:
+            from backend.ws_server import get_ws_server
+            await get_ws_server().stop()
+            if hasattr(self, '_ws_runner'):
+                await self._ws_runner.cleanup()
+        except Exception as e:
+            print(f"WS 서버 정지 중 에러: {e}")
+
         await self.pipeline.cleanup()
         print("✅ 스케줄러 정지 완료")
 

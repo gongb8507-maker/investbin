@@ -57,6 +57,7 @@ class Orchestrator:
     - data.json 원자적 읽기/쓰기 (파일 락 + 버전 관리)
     - 단계별 롤백/복구 지원
     - 동시 실행 방지 (싱글톤 패턴)
+    - 실시간 WebSocket 브로드캐스트 지원
     """
 
     def __init__(self, data_file: str = None):
@@ -66,6 +67,10 @@ class Orchestrator:
         self._state = PipelineState()
         self._data_cache: Optional[Dict[str, Any]] = None
         self._lock_acquired = False
+
+        # WebSocket 서버 콜백 (지연 로딩으로 순환 import 방지)
+        self._ws_server = None
+        self._ws_notify_enabled = True
 
     # ==========================================
     # Data.json 원자적 읽기/쓰기 (파일 락)
@@ -390,6 +395,88 @@ class Orchestrator:
         """Mock 모드 활성화 (데이터 파일 우회)"""
         self._data_cache = self._default_data()
         self._data_cache["data_source"] = "mock"
+
+    # ==========================================
+    # WebSocket 실시간 알림
+    # ==========================================
+
+    def _notify_ws_clients(self, changed_fields: Dict[str, Any]):
+        """WebSocket 클라이언트들에게 변경 사항 알림 (비동기)"""
+        if not self._ws_notify_enabled:
+            return
+
+        try:
+            from backend.ws_server import ensure_ws_server_started
+            ws_server = asyncio.get_event_loop().run_until_complete(ensure_ws_server_started())
+            # 비동기 태스크로 브로드캐스트 (블로킹 방지)
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                loop.create_task(ws_server.broadcast_data_change(changed_fields))
+        except Exception:
+            # WS 서버가 없거나 에러 시 무시 (파일 기반 폴백 유지)
+            pass
+
+    def set_ws_notify(self, enabled: bool):
+        """WebSocket 알림 활성화/비활성화"""
+        self._ws_notify_enabled = enabled
+
+    # save_data 오버라이드하여 변경 시 알림
+    def save_data(self, data: Dict[str, Any]) -> bool:
+        """data.json 원자적 저장 (락 + 버전 증가 + 백업 + WS 알림)"""
+        if not self._acquire_lock():
+            print("[Orchestrator] 저장 실패: 락 획득 불가")
+            return False
+
+        try:
+            # 이전 데이터와 비교하여 변경된 필드 찾기
+            old_data = self._data_cache or {}
+            changed_fields = {}
+            for key, value in data.items():
+                if key not in old_data or old_data[key] != value:
+                    changed_fields[key] = value
+
+            # 버전 증가
+            data["pipeline_version"] = data.get("pipeline_version", 0) + 1
+            data["last_updated"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            # 백업 생성 (이전 버전)
+            if self.data_file.exists():
+                backup_path = self.data_file.with_suffix(f".bak.{data['pipeline_version'] - 1}.json")
+                try:
+                    import shutil
+                    shutil.copy2(self.data_file, backup_path)
+                    self._cleanup_backups(keep=5)
+                except Exception:
+                    pass
+
+            # 원자적 쓰기: 임시 파일 → rename
+            temp_file = self.data_file.with_suffix(".tmp")
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+
+            # Windows에서 atomic rename
+            if os.name == 'nt':
+                if self.data_file.exists():
+                    os.replace(temp_file, self.data_file)
+                else:
+                    temp_file.rename(self.data_file)
+            else:
+                os.rename(temp_file, self.data_file)
+
+            self._data_cache = data
+            self._state.version = data["pipeline_version"]
+
+            # 변경된 필드가 있으면 WebSocket 브로드캐스트
+            if changed_fields:
+                self._notify_ws_clients(changed_fields)
+
+            return True
+
+        except Exception as e:
+            print(f"[Orchestrator] 데이터 저장 실패: {e}")
+            return False
+        finally:
+            self._release_lock()
 
 
 # 싱글톤 인스턴스
