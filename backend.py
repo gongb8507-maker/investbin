@@ -1,6 +1,7 @@
 import os
 import json
 import asyncio
+import random
 from datetime import datetime
 
 # Load environment variables from .env file
@@ -14,6 +15,90 @@ load_dotenv()
 import pathlib
 BASE_DIR = pathlib.Path(__file__).parent.resolve()
 DATA_FILE = BASE_DIR / "public" / "data.json"
+
+
+def generate_stock_detail_data(stock_code, stock_name, current_price, data_source):
+    """Generate stock detail data including AI analysis."""
+    base_price = float(str(current_price).replace(',', '').replace('원', '').replace('$', ''))
+
+    # Generate price history for intraday chart (39 data points: 9:30-16:00, 10min intervals)
+    chart_data = []
+    price = base_price * (0.99 + random.random() * 0.02)  # Start near current price
+    for i in range(39):
+        hour = 9 + (30 + i * 10) // 60
+        minute = (30 + i * 10) % 60
+        time_str = f"{hour:02d}:{minute:02d}"
+        change = (random.random() - 0.5) * 0.01  # ±0.5% per interval
+        price = price * (1 + change)
+        chart_data.append({"time": time_str, "price": round(price, 2)})
+
+    # Ensure last price matches current
+    chart_data[-1]["price"] = base_price
+
+    open_price = chart_data[0]["price"]
+    high_price = max(d["price"] for d in chart_data)
+    low_price = min(d["price"] for d in chart_data)
+    volume = random.randint(500000, 50000000)
+    change_rate = ((base_price - open_price) / open_price * 100)
+    change_amount = base_price - open_price
+
+    # AI Expert Team Analysis (bullish/bearish factors)
+    bullish_factors = [
+        "외국인 5일 연속 순매수세 유입",
+        "기관 대량 매수 전환, 수급 개선 뚜렷",
+        "실적 전망 상향 조정, 컨센서스 상향",
+        "신사업 모멘텀 가시화, 밸류에이션 재평가",
+        "자사주 매입 발표, 주주환원 정책 강화",
+        "업황 턴어라운드 조짐, 사이클 진입",
+        "해외 수출 계약 체결, 매출 다변화 성공",
+        "배당 수익률 매력 부각, 배당성향 상향"
+    ]
+
+    bearish_factors = [
+        "대주주 지분 매도 공시, 오버행 우려",
+        "실적 가이던스 하향, 어닝 쇼크 가능성",
+        "경쟁사 신제품 출시, 시장 점유율 하락",
+        "원자재가 상승, 마진 압박 지속",
+        "규제 리스크 부각, 사업 확장 제약",
+        "환율 변동성 확대, 외화환산 손실 우려",
+        "차익 실현 매물 출회, 단기 과열 경계",
+        "섹터 전체 조정장, 동반 하락 압력"
+    ]
+
+    # Select 1-2 factors each
+    expert_good = random.choice(bullish_factors)
+    expert_bad = random.choice(bearish_factors)
+
+    # AI CEO Comment (investment thesis one-liner)
+    ceo_comments = [
+        f"{stock_name}: 펀더멘털 대비 저평가 구간, 중장기 보유 적합",
+        f"{stock_name}: 수급 개선 초기 단계, 추가 상승 여력 충분",
+        f"{stock_name}: 실적 모멘텀 강력, 목표가 상향 조정 예상",
+        f"{stock_name}: 단기 조정 마무리, 매수 타이밍 양호",
+        f"{stock_name}: 모멘텀 지속 단 고점 근접, 분할 매수 권장",
+        f"{stock_name}: 턴어라운드 스토리 가시화, 리스크 대비 수익 매력적",
+        f"{stock_name}: 배당+성장 동시 충족, 방어적 포트폴리오 핵심",
+        f"{stock_name}: 기관 수급 독점적, 외국인 추격 매수 기대"
+    ]
+
+    ceo_comment = random.choice(ceo_comments)
+
+    return {
+        "code": stock_code,
+        "name": stock_name,
+        "current_price": base_price,
+        "change_rate": round(change_rate, 2),
+        "change_amount": round(change_amount, 2),
+        "volume": volume,
+        "high": round(high_price, 2),
+        "low": round(low_price, 2),
+        "open": round(open_price, 2),
+        "chart_data": chart_data,
+        "expert_good": expert_good,
+        "expert_bad": expert_bad,
+        "ceo_comment": ceo_comment,
+        "currency": "KRW"  # Korean stocks use KRW
+    }
 
 
 def load_data():
@@ -181,6 +266,14 @@ async def generate_ai_market_data():
             "daily_profit": "+ ₩ 342,000 (+2.8%)"
         }
 
+    # Generate stock detail data for top picks
+    stock_details = {}
+    for pick in top_picks:
+        code = pick["code"]
+        name = pick["name"]
+        price = pick["price"]
+        stock_details[code] = generate_stock_detail_data(code, name, price, data_source)
+
     market_data = {
         "last_updated": current_time,
         "system_metrics": system_metrics,
@@ -189,6 +282,7 @@ async def generate_ai_market_data():
         "orders": existing_orders,
         "indices": indices_dicts,
         "portfolio": portfolio,
+        "stock_details": stock_details,
         "data_source": data_source
     }
 

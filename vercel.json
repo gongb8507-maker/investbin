@@ -4,7 +4,7 @@
     { "src": "public/**", "use": "@vercel/static" }
   ],
   "routes": [
-    { "src": "/data.json", "headers": { "Cache-Control": "no-cache, no-store, must-revalidate" } },
+    { "src": "/data.json", "dest": "/public/data.json", "headers": { "Cache-Control": "no-cache, no-store, must-revalidate" } },
     { "src": "/(.*)", "dest": "/public/$1" }
   ]
 }

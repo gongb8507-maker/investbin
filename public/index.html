@@ -2,7 +2,7 @@
 <html lang="ko" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>investbin - 토스증권 스타일 미장 퀀트 대시보드</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -29,6 +29,8 @@
     </script>
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for portfolio graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         body { background-color: #191f28; color: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -43,12 +45,18 @@
             display: inline-block;
             animation: marquee 30s linear infinite;
         }
+        /* Mobile table scroll */
+        .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .table-scroll table { min-width: 600px; }
+        /* Safe area for iPhone notch/home indicator */
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+        .safe-top { padding-top: env(safe-area-inset-top, 0px); }
     </style>
 </head>
-<body class="min-h-screen pb-24 md:pb-12 antialiased selection:bg-blue-500 selection:text-white">
+<body class="min-h-screen pb-28 md:pb-12 antialiased selection:bg-blue-500 selection:text-white safe-bottom">
 
     <!-- Toss Style Header -->
-    <header class="sticky top-0 z-50 bg-[#191f28]/90 backdrop-blur-md border-b border-[#2a323f]">
+    <header class="sticky top-0 z-50 bg-[#191f28]/90 backdrop-blur-md border-b border-[#2a323f] safe-top">
         <div class="max-w-xl mx-auto px-4 h-14 flex items-center justify-between">
             <div class="flex items-center space-x-2.5">
                 <div class="w-8 h-8 rounded-xl bg-blue-500 flex items-center justify-center font-bold text-white text-base shadow-md shadow-blue-500/20">
@@ -58,7 +66,7 @@
                 <span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 font-semibold">미장 80% 🚀</span>
             </div>
             <div class="flex items-center space-x-2">
-                <button onclick="loadData" class="text-[#8b95a1] hover:text-white p-2 rounded-xl transition text-sm" title="새로고침">
+                <button onclick="loadData()" class="text-[#8b95a1] hover:text-white p-2 rounded-xl transition text-sm" title="새로고침">
                     <i class="fa-solid fa-rotate"></i>
                 </button>
             </div>
@@ -66,13 +74,13 @@
     </header>
 
     <!-- Main Container (Mobile First Toss Width) -->
-    <main class="max-w-xl mx-auto px-4 pt-4 space-y-5">
+    <main class="max-w-xl mx-auto px-4 pt-4 pb-24 md:pb-12 space-y-5">
 
         <!-- TAB 1: HOME -->
         <section id="tab-home" class="tab-content space-y-5">
 
             <!-- Ticker Bar (Real-time Market Indices) -->
-            <div id="ticker-bar" class="marquee flex overflow-x-auto space-x-2 py-2 text-xs text-[#8b95a1] border-b border-[#2a323f] mb-4">
+            <div id="ticker-bar" class="marquee flex overflow-x-auto space-x-3 py-2 text-xs text-[#8b95a1] border-b border-[#2a323f] mb-4 px-1 -ml-1">
                 <!-- Injected by JS -->
             </div>
 
@@ -94,8 +102,8 @@
             </div>
 
             <!-- Data Source Banner -->
-            <div id="data-source-banner" class="hidden bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 rounded-2xl p-4 text-xs font-medium flex items-center justify-center space-x-2">
-                <i class="fa-solid fa-triangle-exclamation"></i>
+            <div id="data-source-banner" class="hidden bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 rounded-2xl p-3 text-xs font-medium flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-triangle-exclamation text-sm"></i>
                 <span id="data-source-text">샘플 데이터입니다. 실제 계좌 아님</span>
             </div>
 
@@ -143,7 +151,34 @@
             <!-- TAB 4: PORTFOLIO (NEW) -->
             <section id="tab-portfolio" class="tab-content hidden space-y-4">
                 <h3 class="text-base font-bold px-1">내 포트폴리오 현황</h3>
-                <div id="portfolio-container" class="bg-[#222933] border border-[#2a323f] rounded-3xl p-6 shadow-lg">
+
+                <!-- Portfolio Summary Charts -->
+                <div class="bg-[#222933] border border-[#2a323f] rounded-3xl p-5 shadow-lg space-y-5">
+                    <!-- Asset Allocation Donut Chart -->
+                    <div class="space-y-3">
+                        <h4 class="text-xs font-medium text-[#8b95a1] flex items-center space-x-1">
+                            <span>자산 배분</span>
+                        </h4>
+                        <div class="flex justify-center items-center h-48 md:h-56 relative">
+                            <canvas id="allocationChart" width="280" height="280"></canvas>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                <div class="text-2xl font-black text-white tabular-nums" id="total-asset-value">-</div>
+                                <div class="text-[10px] text-[#8b95a1] mt-1">총 평가금액</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PnL Bar Chart -->
+                    <div class="pt-3 border-t border-[#2a323f] space-y-3">
+                        <h4 class="text-xs font-medium text-[#8b95a1]">종목별 손익</h4>
+                        <div class="h-36 relative">
+                            <canvas id="pnlChart" width="320" height="120"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Holdings Table -->
+                <div id="portfolio-container" class="bg-[#222933] border border-[#2a323f] rounded-3xl p-5 shadow-lg">
                     <!-- Injected by JS -->
                 </div>
             </section>
@@ -194,32 +229,32 @@
         </section>
 
         <!-- Toss Style Bottom Navigation Bar -->
-        <nav class="md:max-w-xl md:left-1/2 md:-translate-x-1/2 fixed bottom-0 left-0 right-0 bg-[#191f28]/95 backdrop-blur-md border-t border-[#2a323f] z-40 px-6 py-3 flex justify-around">
-            <button onclick="switchTab('home')" id="bm-home" class="mobile-nav-btn flex flex-col items-center space-y-1 text-blue-500">
-                <i class="fa-solid fa-house text-lg"></i>
-                <span class="text-[10px] font-bold">홈</span>
+        <nav class="max-w-xl mx-auto fixed bottom-0 left-1/2 -translate-x-1/2 w-full bg-[#191f28]/95 backdrop-blur-md border-t border-[#2a323f] z-40 px-4 py-2.5 safe-bottom flex justify-around gap-1">
+            <button onclick="switchTab('home')" id="bm-home" class="mobile-nav-btn flex-1 flex flex-col items-center space-y-0.5 text-blue-500 min-w-0">
+                <i class="fa-solid fa-house text-base"></i>
+                <span class="text-[9px] font-bold truncate">홈</span>
             </button>
-            <button onclick="switchTab('signals')" id="bm-signals" class="mobile-nav-btn flex flex-col items-center space-y-1 text-[#8b95a1]">
-                <i class="fa-solid fa-bolt text-lg"></i>
-                <span class="text-[10px] font-bold">시그널</span>
+            <button onclick="switchTab('signals')" id="bm-signals" class="mobile-nav-btn flex-1 flex flex-col items-center space-y-0.5 text-[#8b95a1] min-w-0">
+                <i class="fa-solid fa-bolt text-base"></i>
+                <span class="text-[9px] font-bold truncate">시그널</span>
             </button>
-            <button onclick="switchTab('portfolio')" id="bm-portfolio" class="mobile-nav-btn flex flex-col items-center space-y-1 text-[#8b95a1]">
-                <i class="fa-solid fa-user-pen text-lg"></i>
-                <span class="text-[10px] font-bold">포트폴리오</span>
+            <button onclick="switchTab('portfolio')" id="bm-portfolio" class="mobile-nav-btn flex-1 flex flex-col items-center space-y-0.5 text-[#8b95a1] min-w-0">
+                <i class="fa-solid fa-user-pen text-base"></i>
+                <span class="text-[9px] font-bold truncate">포트폴리오</span>
             </button>
-            <button onclick="switchTab('reports')" id="bm-reports" class="mobile-nav-btn flex flex-col items-center space-y-1 text-[#8b95a1]">
-                <i class="fa-solid fa-newspaper text-lg"></i>
-                <span class="text-[10px] font-bold">리포트</span>
+            <button onclick="switchTab('reports')" id="bm-reports" class="mobile-nav-btn flex-1 flex flex-col items-center space-y-0.5 text-[#8b95a1] min-w-0">
+                <i class="fa-solid fa-newspaper text-base"></i>
+                <span class="text-[9px] font-bold truncate">리포트</span>
             </button>
-            <button onclick="switchTab('history')" id="bm-history" class="mobile-nav-btn flex flex-col items-center space-y-1 text-[#8b95a1]">
-                <i class="fa-solid fa-clock-rotate-left text-lg"></i>
-                <span class="text-[10px] font-bold">승인내역</span>
+            <button onclick="switchTab('history')" id="bm-history" class="mobile-nav-btn flex-1 flex flex-col items-center space-y-0.5 text-[#8b95a1] min-w-0">
+                <i class="fa-solid fa-clock-rotate-left text-base"></i>
+                <span class="text-[9px] font-bold truncate">승인내역</span>
             </button>
         </nav>
 
         <!-- Approval Modal (Toss Bottom Sheet Style) -->
-        <div id="approvalModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end md:items-center justify-center p-0 md:p-4 hidden">
-            <div class="bg-[#222933] border-t md:border border-[#2a323f] rounded-t-3xl md:rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+        <div id="approvalModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end justify-center p-0 hidden safe-bottom">
+            <div class="bg-[#222933] border-t border-[#2a323f] rounded-t-3xl p-6 w-full max-w-md shadow-2xl space-y-4 safe-bottom">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full">미장 실전 매매 승인</span>
                     <button onclick="closeModal()" class="text-[#8b95a1] hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
@@ -252,6 +287,109 @@
                     <button onclick="executeOrder()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-2xl transition text-sm shadow-lg shadow-blue-500/30 flex items-center justify-center space-x-2">
                         <i class="fa-solid fa-check"></i>
                         <span>매수 승인하기</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock Detail Modal (Toss Style Full Screen) -->
+        <div id="stockDetailModal" class="fixed inset-0 bg-[#191f28] z-50 flex flex-col hidden safe-top safe-bottom">
+            <!-- Header -->
+            <header class="sticky top-0 z-10 bg-[#191f28]/95 backdrop-blur-md border-b border-[#2a323f] p-4">
+                <div class="flex items-center justify-between">
+                    <button onclick="closeStockDetail()" class="text-[#8b95a1] hover:text-white p-2">
+                        <i class="fa-solid fa-chevron-down text-xl"></i>
+                    </button>
+                    <div class="flex-1 text-center">
+                        <h3 id="detailStockName" class="text-base font-bold text-white">종목명</h3>
+                        <span id="detailStockCode" class="text-xs text-[#8b95a1]">CODE</span>
+                    </div>
+                    <button onclick="openModalFromDetail()" class="text-blue-400 hover:text-blue-300 p-2 text-sm font-medium">매수</button>
+                </div>
+
+                <!-- Price Header -->
+                <div class="mt-4 space-y-1">
+                    <div id="detailCurrentPrice" class="text-3xl font-black text-white tabular-nums">$0.00</div>
+                    <div class="flex items-center justify-center space-x-3 text-sm">
+                        <span id="detailChangeRate" class="font-bold tabular-nums">+0.00%</span>
+                        <span id="detailChangeAmount" class="font-bold tabular-nums">+$0.00</span>
+                        <span id="detailMarketState" class="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400">실시간</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Chart Area -->
+            <div class="flex-1 relative p-4 min-h-0" style="height: 200px;">
+                <canvas id="detailPriceChart"></canvas>
+                <div id="chartLoading" class="absolute inset-0 flex items-center justify-center text-[#8b95a1] text-sm">
+                    차트 로딩 중...
+                </div>
+            </div>
+
+            <!-- Key Stats -->
+            <div class="bg-[#222933] border-t border-[#2a323f] p-4">
+                <div class="grid grid-cols-4 gap-3 text-center">
+                    <div>
+                        <div class="text-[10px] text-[#8b95a1]">거래량</div>
+                        <div id="detailVolume" class="text-sm font-bold text-white tabular-nums">-</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-[#8b95a1]">고가</div>
+                        <div id="detailHigh" class="text-sm font-bold text-white tabular-nums">-</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-[#8b95a1]">저가</div>
+                        <div id="detailLow" class="text-sm font-bold text-white tabular-nums">-</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-[#8b95a1]">시가</div>
+                        <div id="detailOpen" class="text-sm font-bold text-white tabular-nums">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Analysis Section -->
+            <div class="p-4 space-y-3 overflow-y-auto flex-1" style="max-height: 300px;">
+                <!-- Expert Team Analysis -->
+                <div class="bg-[#222933] border border-[#2a323f] rounded-2xl p-4">
+                    <div class="flex items-center space-x-2 mb-3">
+                        <div class="w-7 h-7 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center text-xs font-bold">
+                            <i class="fa-solid fa-brain"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs font-medium text-white">주식 고수 + 시장분석 전담팀</div>
+                            <div class="text-[10px] text-[#8b95a1]">호재/악재 종합 진단</div>
+                        </div>
+                    </div>
+                    <div id="expertAnalysis" class="text-sm text-gray-300 leading-relaxed bg-[#191f28] p-3 rounded-xl border border-[#2a323f] min-h-[60px]">
+                        분석 데이터를 불러오는 중...
+                    </div>
+                </div>
+
+                <!-- AI CEO Comment -->
+                <div class="bg-[#222933] border border-[#2a323f] rounded-2xl p-4">
+                    <div class="flex items-center space-x-2 mb-3">
+                        <div class="w-7 h-7 rounded-xl bg-yellow-500/10 text-yellow-400 flex items-center justify-center text-xs font-bold">
+                            <i class="fa-solid fa-crown"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs font-medium text-white">AI CEO 최종 코멘트</div>
+                            <div class="text-[10px] text-[#8b95a1]">투자 포인트 한줄 요약</div>
+                        </div>
+                    </div>
+                    <div id="ceoComment" class="text-sm text-yellow-300 leading-relaxed bg-[#191f28] p-3 rounded-xl border border-yellow-500/30 min-h-[50px] font-medium">
+                        CEO 코멘트 준비 중...
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="grid grid-cols-2 gap-3 pt-2">
+                    <button onclick="closeStockDetail()" class="bg-[#2a323f] hover:bg-[#323b49] text-gray-300 font-semibold py-3 rounded-2xl transition text-sm">
+                        닫기
+                    </button>
+                    <button onclick="openModalFromDetail()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-2xl transition text-sm shadow-lg shadow-blue-500/30 flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-arrow-up"></i>
+                        <span>매수하기</span>
                     </button>
                 </div>
             </div>
@@ -295,29 +433,48 @@
                     return;
                 }
                 const holdings = portfolio.holdings || [];
+
+                // Compact number formatting (Toss style)
+                const fmt = (num, currency) => {
+                    if (currency === 'USD') {
+                        // $6.00 → $6.0, -$402.50 → -$402.5
+                        return num.toLocaleString('en-US', {minimumFractionDigits: 1, maximumFractionDigits: 1});
+                    }
+                    // ₩603,612 → ₩603,612 (원 단위)
+                    return Math.round(num).toLocaleString('ko-KR');
+                };
+
+                // Short number for tight columns (e.g., 6.0, 17.5)
+                const fmtShort = (num, currency) => {
+                    if (currency === 'USD') {
+                        return num.toFixed(1);
+                    }
+                    return Math.round(num).toLocaleString('ko-KR');
+                };
+
                 let html = `
-                    <div class="flex items-start space-x-3">
-                        <div class="w-12 rounded-md bg-[#2a323f] p-2">
-                            <span class="text-xs font-bold text-green-400">${portfolio.total_balance}</span>
-                        </div>
-                        <div>
-                            <div class="font-semibold text-white">총 자산</div>
-                            <div class="text-xs text-[#8b95a1]">${portfolio.cash}</div>
-                        </div>
+                    <div class="flex items-center justify-between mb-3 px-1">
+                        <span class="text-xs font-medium text-[#8b95a1]">총 자산</span>
+                        <span class="text-lg font-bold text-white tabular-nums">${portfolio.total_balance}</span>
                     </div>
-                    <table class="w-full table-fixed mt-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-[#2a323f] mb-3 px-1">
+                        <span class="text-xs font-medium text-[#8b95a1]">평가손익</span>
+                        <span class="text-lg font-bold text-green-400 tabular-nums" id="total-pnl-display">${'₩0'}</span>
+                    </div>
+                    <div class="table-scroll">
+                    <table class="w-full mt-2" style="min-width: 580px;">
                         <thead>
-                            <tr class="text-xs text-[#8b95a1] border-b border-[#2a323f]">
-                                <th class="p-2 code-col">종목코드</th>
-                                <th class="p-2 name-col">종목명</th>
-                                <th class="p-2 qty-col">수량</th>
-                                <th class="p-2 avg-col">평균가</th>
-                                <th class="p-2 current-col">현재가</th>
-                                <th class="p-2 pnl-col">손익</th>
-                                <th class="p-2 roi-col">수익률(%)</th>
+                            <tr class="text-[10px] text-[#8b95a1] border-b border-[#2a323f]">
+                                <th class="px-2 py-2 text-left font-medium whitespace-nowrap">종목</th>
+                                <th class="px-2 py-2 text-right font-medium whitespace-nowrap">수량</th>
+                                <th class="px-2 py-2 text-right font-medium whitespace-nowrap">평균가</th>
+                                <th class="px-2 py-2 text-right font-medium whitespace-nowrap">현재가</th>
+                                <th class="px-2 py-2 text-right font-medium whitespace-nowrap">평가금액</th>
+                                <th class="px-2 py-2 text-right font-medium whitespace-nowrap">손익</th>
+                                <th class="px-2 py-2 text-right font-medium whitespace-nowrap">수익률</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody class="divide-y divide-[#2a323f]/50">
                         `;
                 holdings.forEach(h => {
                     const pnl = h.unrealized_pnl;
@@ -326,51 +483,230 @@
                     const roiClass = roi >= 0 ? 'text-green-400' : 'text-red-400';
                     const currency = h.currency || 'KRW';
                     const currencySymbol = currency === 'USD' ? '$' : '₩';
-
-                    // Format numbers with proper locale
-                    const formatNum = (num) => {
-                        if (currency === 'USD') {
-                            return num.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                        }
-                        return num.toLocaleString('ko-KR');
-                    };
+                    const evalAmount = h.qty * h.current_price;
 
                     html += `
-                        <tr class="text-sm text-white">
-                            <td class="p-2 code-col">${h.code}</td>
-                            <td class="p-2 name-col">${h.name}</td>
-                            <td class="p-2 qty-col">${h.qty}</td>
-                            <td class="p-2 avg-col">${currencySymbol}${formatNum(h.avg_price)}</td>
-                            <td class="p-2 current-col">${currencySymbol}${formatNum(h.current_price)}</td>
-                            <td class="p-2 pnl-col ${pnlClass}">${currencySymbol}${formatNum(pnl)}</td>
-                            <td class="p-2 roi-col ${roiClass}">${roi.toFixed(2)}%</td>
+                        <tr class="text-sm text-white hover:bg-[#2a323f]/30">
+                            <td class="px-2 py-3 text-left font-medium whitespace-nowrap">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-[11px] font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded">${h.code}</span>
+                                    <span class="text-base">${h.name}</span>
+                                </div>
+                            </td>
+                            <td class="px-2 py-3 text-right tabular-nums whitespace-nowrap text-[#8b95a1]">${h.qty}</td>
+                            <td class="px-2 py-3 text-right tabular-nums whitespace-nowrap">${currencySymbol}${fmtShort(h.avg_price, currency)}</td>
+                            <td class="px-2 py-3 text-right tabular-nums whitespace-nowrap">${currencySymbol}${fmtShort(h.current_price, currency)}</td>
+                            <td class="px-2 py-3 text-right tabular-nums whitespace-nowrap text-[#8b95a1]">${currencySymbol}${fmt(evalAmount, currency)}</td>
+                            <td class="px-2 py-3 text-right tabular-nums whitespace-nowrap ${pnlClass} font-medium">${pnl >= 0 ? '+' : ''}${currencySymbol}${fmt(pnl, currency)}</td>
+                            <td class="px-2 py-3 text-right tabular-nums whitespace-nowrap ${roiClass} font-medium">${roi >= 0 ? '+' : ''}${roi.toFixed(2)}%</td>
                         </tr>
                     `;
                 });
-                html += `</tbody></table>`;
+                html += `</tbody></table></div>`;
                 container.innerHTML = html;
+
+                // Calculate and display total PnL
+                const totalPnl = holdings.reduce((sum, h) => sum + (h.unrealized_pnl || 0), 0);
+                const currency = holdings[0]?.currency || 'KRW';
+                const currencySymbol = currency === 'USD' ? '$' : '₩';
+                const fmtPnl = (num) => {
+                    if (currency === 'USD') {
+                        return num.toLocaleString('en-US', {minimumFractionDigits: 1, maximumFractionDigits: 1});
+                    }
+                    return Math.round(num).toLocaleString('ko-KR');
+                };
+                const pnlEl = document.getElementById('total-pnl-display');
+                if (pnlEl) {
+                    pnlEl.textContent = `${totalPnl >= 0 ? '+' : ''}${currencySymbol}${fmtPnl(totalPnl)}`;
+                    pnlEl.className = `text-lg font-bold tabular-nums ${totalPnl >= 0 ? 'text-green-400' : 'text-red-400'}`;
+                }
+
+                // Render charts
+                renderPortfolioCharts(holdings, portfolio.total_balance, currency);
             }
 
-            async function loadData() {
-                try {
-                    const res = await fetch('data.json?t=' + new Date().getTime());
-                    if (!res.ok) throw new Error();
-                    backendData = await res.json();
-                    render(backendData);
-                } catch (e) {
-                    console.error(e);
+            // Portfolio Charts
+            let allocationChart = null;
+            let pnlChart = null;
+
+            function renderPortfolioCharts(holdings, totalBalance, currency) {
+                const currencySymbol = currency === 'USD' ? '$' : '₩';
+
+                // Unique color palette per stock (Toss style)
+                const stockColors = {
+                    'GRML': '#3182f6',  // Toss blue
+                    'GLND': '#f97316',  // Orange
+                    'AAPL': '#007aff',  // iOS blue
+                    'TSLA': '#cc0000',  // Tesla red
+                    'NVDA': '#76b900',  // Nvidia green
+                    'MSFT': '#0078d4',  // Microsoft blue
+                    'GOOGL': '#ea4335', // Google red
+                    'META': '#1877f2',  // Meta blue
+                    'AMZN': '#ff9900',  // Amazon orange
+                    'DEFAULT': ['#3182f6', '#f97316', '#76b900', '#a855f7', '#ec4899', '#06b6d4', '#84cc16', '#f43f5e']
+                };
+
+                const getStockColor = (code, index) => {
+                    if (stockColors[code]) return stockColors[code];
+                    return stockColors.DEFAULT[index % stockColors.DEFAULT.length];
+                };
+
+                // Calculate eval amounts
+                const chartData = holdings.map((h, i) => ({
+                    code: h.code,
+                    name: h.name,
+                    evalAmount: h.qty * h.current_price,
+                    pnl: h.unrealized_pnl || 0,
+                    pnlColor: h.unrealized_pnl >= 0 ? '#22c55e' : '#ef4444',
+                    stockColor: getStockColor(h.code, i),
+                    percentage: totalBalance ? ((h.qty * h.current_price) / parseFloat(totalBalance.replace(/[^0-9.-]+/g, '')) * 100) : 0
+                }));
+
+                // Total asset value display
+                const totalAssetEl = document.getElementById('total-asset-value');
+                if (totalAssetEl) {
+                    totalAssetEl.textContent = totalBalance;
+                }
+
+                // Allocation Donut Chart
+                const allocCtx = document.getElementById('allocationChart');
+                if (allocCtx) {
+                    if (allocationChart) allocationChart.destroy();
+
+                    const labels = chartData.map(d => d.code);
+                    const values = chartData.map(d => d.evalAmount);
+                    const colors = chartData.map(d => d.stockColor);
+                    const percentages = chartData.map(d => d.percentage.toFixed(1) + '%');
+
+                    allocationChart = new Chart(allocCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: values,
+                                backgroundColor: colors,
+                                borderWidth: 0,
+                                borderRadius: 4,
+                                spacing: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            cutout: '70%',
+                            plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                tooltip: {
+                                    enabled: true,
+                                    backgroundColor: '#222933',
+                                    titleColor: '#f9fafb',
+                                    bodyColor: '#f9fafb',
+                                    borderColor: '#2a323f',
+                                    borderWidth: 1,
+                                    callbacks: {
+                                        label: (ctx) => {
+                                            const idx = ctx.dataIndex;
+                                            const val = chartData[idx].evalAmount;
+                                            const pct = percentages[idx];
+                                            return `${chartData[idx].code}: ${currencySymbol}${val.toLocaleString(currency === 'USD' ? 'en-US' : 'ko-KR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} (${pct})`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    // Add custom legend below chart
+                    addChartLegend('allocationChart', chartData, currency, currencySymbol);
+                }
+
+                // PnL Horizontal Bar Chart
+                const pnlCtx = document.getElementById('pnlChart');
+                if (pnlCtx) {
+                    if (pnlChart) pnlChart.destroy();
+
+                    // Sort by PnL for better visualization
+                    const sorted = [...chartData].sort((a, b) => a.pnl - b.pnl);
+
+                    pnlChart = new Chart(pnlCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: sorted.map(d => d.code),
+                            datasets: [{
+                                data: sorted.map(d => d.pnl),
+                                backgroundColor: sorted.map(d => d.stockColor),
+                                borderRadius: 4,
+                                borderSkipped: false
+                            }]
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    enabled: true,
+                                    backgroundColor: '#222933',
+                                    titleColor: '#f9fafb',
+                                    bodyColor: '#f9fafb',
+                                    borderColor: '#2a323f',
+                                    borderWidth: 1,
+                                    callbacks: {
+                                        label: (ctx) => {
+                                            const val = ctx.raw;
+                                            return `${val >= 0 ? '+' : ''}${currencySymbol}${val.toLocaleString(currency === 'USD' ? 'en-US' : 'ko-KR', {minimumFractionDigits: 1, maximumFractionDigits: 1})}`;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    grid: { color: '#2a323f' },
+                                    ticks: { color: '#8b95a1', font: { size: 9 }, callback: (val) => currencySymbol + val.toLocaleString() }
+                                },
+                                y: {
+                                    grid: { display: false },
+                                    ticks: { color: '#f9fafb', font: { size: 10, weight: 'bold' } }
+                                }
+                            },
+                            layout: { padding: { left: 40, right: 8, top: 8, bottom: 8 } }
+                        }
+                    });
                 }
             }
 
+            // Custom legend for allocation chart
+            function addChartLegend(chartId, chartData, currency, currencySymbol) {
+                const canvas = document.getElementById(chartId);
+                if (!canvas) return;
+
+                // Remove existing legend
+                const existingLegend = canvas.parentNode.querySelector('.chart-legend');
+                if (existingLegend) existingLegend.remove();
+
+                const legend = document.createElement('div');
+                legend.className = 'chart-legend flex flex-wrap justify-center gap-2 mt-3';
+                legend.innerHTML = chartData.map(d => `
+                    <span class="flex items-center space-x-1 text-[10px] text-[#8b95a1]">
+                        <span class="w-2.5 h-2.5 rounded-full" style="background: ${d.stockColor}"></span>
+                        <span class="font-medium text-white">${d.code}</span>
+                        <span>${d.percentage.toFixed(1)}%</span>
+                    </span>
+                `).join('');
+
+                canvas.parentNode.appendChild(legend);
+            }
+
             function render(data) {
-                // Update basic fields
                 document.getElementById('last-updated').innerText = data.last_updated;
                 document.getElementById('stat-aum').innerText = data.market_sentiment.aum;
                 document.getElementById('stat-profit').innerText = data.market_sentiment.daily_profit;
                 document.getElementById('sentiment-title').innerText = data.market_sentiment.status;
                 document.getElementById('sentiment-summary').innerText = data.market_sentiment.summary;
 
-                // Data Source Banner
                 const dataSourceBanner = document.getElementById('data-source-banner');
                 const dataSourceText = document.getElementById('data-source-text');
                 if (data.data_source === "sample") {
@@ -380,10 +716,8 @@
                     dataSourceBanner.classList.add('hidden');
                 }
 
-                // CEO 주문 이력 렌더링 (Human-in-the-Loop 결과)
                 renderOrders(data.orders || []);
 
-                // Top Picks
                 const pickContainer = document.getElementById('top-picks-container');
                 pickContainer.innerHTML = '';
                 data.top_picks.forEach(p => {
@@ -406,7 +740,6 @@
                     `;
                 });
 
-                // Signals
                 const sigContainer = document.getElementById('signals-container');
                 sigContainer.innerHTML = '';
                 data.top_picks.forEach(p => {
@@ -430,10 +763,7 @@
                     `;
                 });
 
-                // Ticker (Real-time Indices)
                 renderTicker(data.indices || []);
-
-                // Portfolio
                 renderPortfolio(data.portfolio);
             }
 
@@ -496,12 +826,199 @@
             }
 
             function openModal(name, code, score, price, reason) {
+                // Open stock detail modal instead of approval modal
+                openStockDetail(name, code, score, price, reason);
+            }
+
+            function openStockDetail(name, code, score, price, reason) {
                 selectedStock = { name, code, score, price, reason };
-                document.getElementById('modalStockName').innerText = `${name} (${code})`;
-                document.getElementById('modalStockPrice').innerText = price;
-                document.getElementById('modalScore').innerText = `${score}점 (강력 매수)`;
-                document.getElementById('modalReason').innerText = reason;
-                document.getElementById('approvalModal').classList.remove('hidden');
+
+                // Update header
+                document.getElementById('detailStockName').innerText = name;
+                document.getElementById('detailStockCode').innerText = code;
+                document.getElementById('detailCurrentPrice').innerText = price;
+
+                // Get real-time data from backendData
+                const stockData = backendData?.stock_details?.[code] || {};
+                const changeRate = stockData.change_rate || '0.00';
+                const changeAmount = stockData.change_amount || '0';
+                const isPositive = parseFloat(changeRate) >= 0;
+                const currentPrice = stockData.current_price || parseFloat(price.replace(/[^0-9.]/g, '')) || 100;
+                const currency = stockData.currency || 'KRW'; // Default to KRW for Korean stocks
+
+                document.getElementById('detailChangeRate').innerText = `${isPositive ? '+' : ''}${changeRate}%`;
+                document.getElementById('detailChangeAmount').innerText = `${isPositive ? '+' : ''}${changeAmount}`;
+                document.getElementById('detailChangeRate').className = `font-bold tabular-nums ${isPositive ? 'text-green-400' : 'text-red-400'}`;
+                document.getElementById('detailChangeAmount').className = `font-bold tabular-nums ${isPositive ? 'text-green-400' : 'text-red-400'}`;
+
+                // Key stats
+                document.getElementById('detailVolume').innerText = formatVolume(stockData.volume);
+                document.getElementById('detailHigh').innerText = stockData.high || '-';
+                document.getElementById('detailLow').innerText = stockData.low || '-';
+                document.getElementById('detailOpen').innerText = stockData.open || '-';
+
+                // Render price chart
+                renderPriceChart(code, stockData.chart_data || [], currentPrice, currency);
+
+                // AI Analysis - Expert Team
+                const expertGood = stockData.expert_good || '호재 분석 데이터 없음';
+                const expertBad = stockData.expert_bad || '악재 분석 데이터 없음';
+                document.getElementById('expertAnalysis').innerHTML = `
+                    <div class="space-y-2">
+                        <div class="flex items-start space-x-2 text-green-400">
+                            <i class="fa-solid fa-circle-check text-xs mt-0.5"></i>
+                            <span class="text-sm"><strong>호재:</strong> ${expertGood}</span>
+                        </div>
+                        <div class="flex items-start space-x-2 text-red-400">
+                            <i class="fa-solid fa-circle-xmark text-xs mt-0.5"></i>
+                            <span class="text-sm"><strong>악재:</strong> ${expertBad}</span>
+                        </div>
+                    </div>
+                `;
+
+                // AI CEO Comment
+                const ceoComment = stockData.ceo_comment || 'AI CEO 분석 중...';
+                document.getElementById('ceoComment').innerText = ceoComment;
+
+                // Show modal
+                document.getElementById('stockDetailModal').classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeStockDetail() {
+                document.getElementById('stockDetailModal').classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+
+            function openModalFromDetail() {
+                closeStockDetail();
+                // Small delay to allow close animation
+                setTimeout(() => {
+                    if (selectedStock) {
+                        document.getElementById('modalStockName').innerText = `${selectedStock.name} (${selectedStock.code})`;
+                        document.getElementById('modalStockPrice').innerText = selectedStock.price;
+                        document.getElementById('modalScore').innerText = `${selectedStock.score}점 (강력 매수)`;
+                        document.getElementById('modalReason').innerText = selectedStock.reason;
+                        document.getElementById('approvalModal').classList.remove('hidden');
+                    }
+                }, 100);
+            }
+
+            function formatVolume(vol) {
+                if (!vol) return '-';
+                const num = parseFloat(vol);
+                if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+                if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+                return num.toLocaleString();
+            }
+
+            function renderPriceChart(code, chartData, currentPrice, currency) {
+                const ctx = document.getElementById('detailPriceChart');
+                const loadingEl = document.getElementById('chartLoading');
+                if (!ctx) return;
+
+                // Hide loading
+                if (loadingEl) loadingEl.style.display = 'none';
+
+                // Destroy existing chart
+                if (window.detailChart) {
+                    window.detailChart.destroy();
+                }
+
+                const currencySymbol = currency === 'USD' ? '$' : '₩';
+
+                // Generate sample intraday data if not available
+                const labels = chartData.length > 0 ? chartData.map(d => d.time) : generateTimeLabels();
+                const prices = chartData.length > 0 ? chartData.map(d => d.price) : generateSamplePrices(currentPrice || 100);
+                const openPrice = prices[0];
+
+                const isPositive = prices[prices.length - 1] >= openPrice;
+                const lineColor = isPositive ? '#22c55e' : '#ef4444';
+                const fillColor = isPositive ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+
+                window.detailChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: code,
+                            data: prices,
+                            borderColor: lineColor,
+                            backgroundColor: fillColor,
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            pointHoverBackgroundColor: lineColor,
+                            pointHoverBorderColor: '#191f28',
+                            pointHoverBorderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                enabled: true,
+                                backgroundColor: '#222933',
+                                titleColor: '#f9fafb',
+                                bodyColor: '#f9fafb',
+                                borderColor: '#2a323f',
+                                borderWidth: 1,
+                                padding: 10,
+                                callbacks: {
+                                    label: (ctx) => {
+                                        const price = ctx.raw;
+                                        const change = ((price - openPrice) / openPrice * 100).toFixed(2);
+                                        return `${code}: ${currencySymbol}${price.toLocaleString(currency === 'USD' ? 'en-US' : 'ko-KR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} (${change >= 0 ? '+' : ''}${change}%)`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                display: false,
+                                grid: { display: false }
+                            },
+                            y: {
+                                display: false,
+                                grid: { display: false }
+                            }
+                        },
+                        elements: {
+                            line: {
+                                capBezierPoints: false
+                            }
+                        }
+                    }
+                });
+            }
+
+            function generateTimeLabels() {
+                const labels = [];
+                const now = new Date();
+                for (let i = 0; i < 39; i++) { // 9:30 ~ 16:00, 10분 간격
+                    const hour = 9 + Math.floor((30 + i * 10) / 60);
+                    const min = (30 + i * 10) % 60;
+                    labels.push(`${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`);
+                }
+                return labels;
+            }
+
+            function generateSamplePrices(basePrice) {
+                const prices = [basePrice];
+                for (let i = 1; i < 39; i++) {
+                    const volatility = 0.005;
+                    const change = (Math.random() - 0.5) * 2 * volatility;
+                    prices.push(prices[i-1] * (1 + change));
+                }
+                return prices;
             }
 
             function closeModal() {
