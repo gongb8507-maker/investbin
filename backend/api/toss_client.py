@@ -391,6 +391,10 @@ class TossClient:
         self._exchange_rate_cache = (rate, datetime.now())
         return rate
 
+    # Note: 토스증권 Open API는 개별 종목 공공 시세/차트 API를 제공하지 않음
+    # 실시간 시세는 GET /api/v1/holdings (보유 종목만) 응답에 포함됨
+    # market-indicators/prices는 KOSPI/KOSDAQ 지수 전용
+
     # ==========================================
     # Data Transformation: API Response → data.json Portfolio
     # ==========================================
